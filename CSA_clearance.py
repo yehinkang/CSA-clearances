@@ -530,23 +530,29 @@ def CSA_Table_5_clearance(p2p_voltage, Buffer_Live):
 
     if  0 < voltage <= 0.75: 
         CSA_5_clearance = CSA_5['0–750V']
+        Voltage_range = '0–750V'
     elif voltage <=22: 
         CSA_5_clearance = CSA_5['>0.75kV<22kV']
+        Voltage_range = '> 0.75 ≤ 22'
     elif voltage <=50: 
         CSA_5_clearance = CSA_5['>22kV<50kV']
+        Voltage_range = '> 22 ≤ 50'
     else: 
         CSA_5_clearance = CSA_5['>50kV<90kV']
+        Voltage_range = '> 50 ≤ 90'
 
     DC = CSA_5_clearance + Buffer_Live
 
     data = {
         'Basic (m)': CSA_5_clearance,
         'Design Clearance (m)': DC,
+
+        'Voltage range': Voltage_range
         }
 
-    return()
+    return data
 CSA5_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Live"]}
-CSA_Table_5_clearance(**CSA5_input)
+CSA_Table5_data = CSA_Table_5_clearance(**CSA5_input)
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -849,8 +855,81 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 5
+#region
+    #Creating the title blocks. etc
+    CSA5_cell00 = 'Minor waterways'
+    CSA5_cell10 = 'Shallow or fast-moving waterways capable of being used by canoes and paddle boats in isolated areas where motor boats are not expected. \n Creeks and streams: W = 3–50 m and D < 1 m \n Ponds: A < 8 ha and D < 1 m \n H = 4.0 m'
+    CSA5_cell20 = 'Shallow or fast-moving waterways capable of being used by motorboats with antennas and unable to support masted vessels \n Creeks and streams: W = 3–50 m and D < 1 m \n Ponds: A < 8 ha and D < 1 m  \n H = 6.0 m'
+    CSA5_cell30 = 'Small lakes and rivers used by masted vessels \n Rivers: W = 3–50 m and D > 1 m \n Ponds and lakes: A < 8 ha and D > 1 m \n H = 8.0 m'
+    CSA5_cell40 = 'Small resort lakes, medium-sized rivers and reservoirs, rivers connecting lakes, and crossings adjacent to bridges and roads \n Rivers: W = 50–500 m  \n Lakes/reservoirs: 8 ha < A < 80 ha  \n H = 10.0 m'
+    CSA5_cell50 = 'Large lakes, reservoirs, and main rivers in resort areas \n Rivers: W > 500 m  \n Lakes/reservoirs 80 ha < A < 800 ha  \n H = 12.0 m'
+    CSA5_cell60 = 'Federally maintained commercial channels, rivers, harbours, or heritage canals'
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+    voltage_range = CSA_Table5_data['Voltage range']
+
+    CSA5_titles = np.array([CSA5_cell00, CSA5_cell10, CSA5_cell20, CSA5_cell30, CSA5_cell40, CSA5_cell50, CSA5_cell60])
+    
+    CSA5 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 3 \n Minimum Vertical Design Clearances above Waterways*, ac \n (See clause 5.3.3.2.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        [' ', 'Minimum clearance above OHWM, m'],
+        ['Type of waterways crossed: \n A = water areas \n D = water depth \n W = water width \n H = reference vessel height‡', 'Guys, messengers, communication, span & lightning protection wires; communication cables', ' ', ' ', ' ', ' ', 'Open Supply Conductors and Service Conductors, ac ' + str(voltage_range) + ' kV'],
+        [' '],
+        [' ', 'Basic (m)', "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", "CSA Total (m)", "Design Clearance (m)"],
+              ]
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(7):
+        row = [CSA5_titles[i], CSA_Table5_data['Neutral Basic (m)'][i], CSA_Table5_data['Neutral Design Clearance (m)'][i], CSA_Table5_data['Basic (m)'][i], CSA_Table5_data['Altitude Adder (m)'][i]]
+        CSA5.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_5 = len(CSA5)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_5 = len(CSA5[7])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA5 = []
+    for i in range(n_row_CSA_table_5):
+        if i < 3:
+            list_range_color_CSA5.append((i + 1, 1, i + 1, n_column_CSA_table_5, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA5.append((i + 1, 1, i + 1, n_column_CSA_table_5, color_bkg_data_1))
+        else:
+            list_range_color_CSA5.append((i + 1, 1, i + 1, n_column_CSA_table_5, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_5 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_5, 'center'), (4, 2, 5, 6, 'center'), (4, 1, 6, 1, 'center'), (4, 7, 5, 12, 'center'), (6, 2, 6, 6, 'center'), (6, 7, 6, 12, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA5,
+        'range_border': [(1, 1, 1, n_column_CSA_table_5), (2, 1, n_row_CSA_table_5, n_column_CSA_table_5)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 20) for i in range(n_column_CSA_table_5)],
+    }
+
+    # define some footer notes
+    footer_CSA5 = ['* The clearance over a canal, river, or stream normally used to provide access for sailboats to a larger body of water shall be the same as that required for the larger body of water.',
+                   '‡ Reference vessel height refers to the overall height of the vessel, including the heights of antennas or other attachments.', 
+                   '§ In Canada, clearances are specified by the Transport Canada office responsible for the coastal regions, Great Lakes system, Red River–Lake Winnipeg system, Mackenzie River, and interior lakes of British Columbia. Where tide water has an effect on a body of water being crossed, the vertical design clearance shall be increased by an amount that takes into account peak tide.']
+
+    # define the worksheet
+    CSA_Table_5 = {
+        'ws_name': 'CSA Table 5',
+        'ws_content': CSA5,
+        'cell_range_style': cell_format_CSA_5,
+        'footer': footer_CSA5
+    }
+#endregion
+
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2]
+    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3]
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
