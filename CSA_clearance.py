@@ -89,14 +89,14 @@ def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, 
     Input_Coordinates= np.array([Latitude, Longitude])
 
     #Opening the sheets within the file
-    Lookup = pd.read_excel(ref_table, "CSA C22.3 No.60826 Table CA.1")
-    Lookup_Snow = pd.read_excel(ref_table, "CSA_C22.3_No.1_table_D1")
+    Lookup = pd.read_excel(ref_table, "CSA C22.3 No.1 Table D2")
 
     #Importing the columns from the excel sheet
     Latitude_lookup = Lookup['Latitude']
     Longitude_lookup = Lookup['Longitude']
-    Place_name = Lookup['For Lookup no overide']
-    Elevation = Lookup['Elevation (m)']
+    Place_name = Lookup['For Lookup']
+    Elevation = Lookup['Elevation, m']
+    Snow_Depth = Lookup['Mean annual maximum snow depth, m']
 
     #Combining the Latitude and Longitude columns into a 2D data frame
     Combined_Coord = pd.concat([Latitude_lookup,Longitude_lookup], axis = 1)
@@ -113,22 +113,8 @@ def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, 
     #Finding the value in the same position in the other datasets
     Closest_place_name = Place_name.iloc[position]
     Closest_elevation = Elevation.iloc[position]
-
-
-    #The snow data is a different length therefor the code is being mirrored for snowfall lookup
-    Latitude_lookup_snow = Lookup_Snow['Latitude (deg)']
-    Longitude_lookup_snow = Lookup_Snow['Longitude (deg)']
-    Snow_Depth = Lookup_Snow['Mean Annual Max Snow Depth (m)']
-
-    Combined_Coord_Snow = pd.concat([Latitude_lookup_snow,Longitude_lookup_snow], axis = 1)
+    Max_snow_depth = Snow_Depth.iloc[position]
     
-    Combined_Coord_snow_array = Combined_Coord_Snow.to_numpy()
-
-    Closest_Snow = Combined_Coord_snow_array[np.linalg.norm(Combined_Coord_snow_array-Input_Coordinates, axis=1).argmin()]
-
-    position_snow = np.where((Combined_Coord_snow_array == Closest_Snow).all(axis=1))[0][0]
-
-    Max_snow_depth = Snow_Depth.iloc[position_snow]
     #The following will return the values as calculated by the function to the user.
     return Closest_place_name, Closest_elevation, Max_snow_depth
 loc_lookup_input = {key: inputs[key] for key in ['Northing_deg', 'Northing_mins', 'Northing_seconds', 'Westing_deg', 'Westing_mins', 'Westing_seconds']}
