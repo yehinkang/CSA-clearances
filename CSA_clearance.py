@@ -24,49 +24,60 @@ ref_table= pd.ExcelFile(ref_table_filepath)
 
 #Let's set up a universal input dictionary
 inputs = {
-    'p2p_voltage': 20,
-    'Max_Overvoltage': 20,
+    'p2p_voltage': 138,
+    'Max_Overvoltage': 0.05,
 
-    'Buffer_Neut':20,
-    'Buffer_Live':20,
+    'Buffer_Neut':1.2,
+    'Buffer_Live':1.2,
 
-    'Design_buffer_2_obstacles':0.2,
-    'Design_Buffer_Same_Structure':0.1,
+    'Design_buffer_2_obstacles':1.2,
+    'Design_Buffer_Same_Structure':0.6,
 
-    'Clearance_Rounding':0.1,
+    'Clearance_Rounding':0.01,
     
     #There will need to be a dropdown menu made on the webpage with matching locations made on the webpage
-    'Location': "Camrose",
+    'Location': "Alberta Camrose",
 
     #Add these as check boxes in the webpage
     'grounded': False,
     'sheathed': False,
 
     #Latitude_Northing
-        'Northing_deg':93,
+        'Northing_deg':53.02,
         'Northing_mins':0,
         'Northing_seconds':0,
 
     #Longitude Westing
-        'Westing_deg':54,
+        'Westing_deg':-112.83,
         'Westing_mins':0,
         'Westing_seconds':0,
 
     # Loc_Elevation (Calculated fromt he coordinates)
 
-    'Custom_Elevation':0,
+    'Custom_Elevation':1200,
 
     #Table 17 Horizontal Conductor Seperations
-        'Span_Length':0,
-        'Final_Unloaded_Sag_15C':0,
+        'Span_Length':150,
+        'Final_Unloaded_Sag_15C':1,
 
     #Crossing_or_Underbuild
-        'Is_main_wire_upper':0,
-        'lower wire':0,
-        'XING_P2P_Voltage':0,
-        'XING_Max_Overvoltage':0,
+        'Is_main_wire_upper':False,
+        'lower wire':True,
+        'XING_P2P_Voltage':79,
+        'XING_Max_Overvoltage':0.05,
 
 }
+
+#The following function takes the decimal points in the dictionary and turns that into an integer to use in np.round in all functions
+def decimal_points(num):
+    num_str = str(num)
+    if '.' in num_str:
+        return len(num_str.split('.')[1])
+    else:
+        return 0
+Clearance_Rounding = {key: inputs[key] for key in ['Clearance_Rounding']}
+Nums_after_decimal = Clearance_Rounding['Clearance_Rounding']
+Numpy_round_integer = decimal_points(Nums_after_decimal)
 
 #The following function will take an dictionary and export it into excel using pandas(useful for troubleshooting dictionary outputs)
 def save2xl(x):
@@ -112,14 +123,20 @@ def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, 
 
     #Finding the value in the same position in the other datasets
     Closest_place_name = Place_name.iloc[position]
-    Closest_elevation = Elevation.iloc[position]
     Max_snow_depth = Snow_Depth.iloc[position]
-    
+
+    Custom_Elevation = {key: inputs[key] for key in ['Custom_Elevation']}
+    if Custom_Elevation['Custom_Elevation'] == 0:
+        Closest_elevation = Elevation.iloc[position]
+    else:
+        Closest_elevation = Custom_Elevation['Custom_Elevation']
+
     #The following will return the values as calculated by the function to the user.
     return Closest_place_name, Closest_elevation, Max_snow_depth
+
+#The following runs the location_lookup function with the dictionary inputs for use in code going forwards
 loc_lookup_input = {key: inputs[key] for key in ['Northing_deg', 'Northing_mins', 'Northing_seconds', 'Westing_deg', 'Westing_mins', 'Westing_seconds']}
-print(loc_lookup_input)
-#location_lookup(**loc_lookup_input)
+Place, Altitude, Snow_Depth = location_lookup(**loc_lookup_input)
 
 #The following function will take inputs and create output arrays that can be inserted into a table
 #This will take voltage in kilovolts and everthing else in meters
@@ -136,24 +153,38 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     if  0 < voltage <= 0.75: 
         #this column is for 120-660V
         AEUC_clearance = AEUC_5['0 to 0.75']
+        voltage_range = '120-600V'
+        column = "II"
     elif voltage <=25: 
         #this column is for 4, 13 & 25 kV
         AEUC_clearance = AEUC_5['0.75 to 22']
+        voltage_range = '4, 13 & 25 kV'
+        column = "III"
     elif voltage <=50: 
         #this column is for 35, 69 & 72 kV
         AEUC_clearance = AEUC_5['22 to 50']
+        voltage_range = '35, 69 & 72 kV'
+        column = "IV"
     elif voltage <=90: 
         #this column is for 138 & 144 kV
         AEUC_clearance = AEUC_5['50 to 90']
+        voltage_range = '138 & 144 kV'
+        column = "V"
     elif voltage <=150: 
         #this column is for 240 kV
         AEUC_clearance = AEUC_5['120 to 150']
+        voltage_range = '240 kV'
+        column = "VI"
     elif voltage <=318: 
         #this column is for 500 kV
         AEUC_clearance = AEUC_5['318']
+        voltage_range = '500 kV'
+        column = "VII"
     else: 
         #this column is for 1000 kV Pole-Pole
         AEUC_clearance = AEUC_5['+/- 500 kVDC']
+        voltage_range = '1000 kVDC Pole-to-Pole'
+        column = "VIII"
 
     #Adders will have to be multiplied by a series so that it only applies to the correct rows
     """ 
@@ -166,13 +197,11 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     6. Above top of rails at railway crossings, equipment not exceeding 7.2m 
     """
     Repave_Adder = np.array([0,0,0.225,0.225,0,0.3], dtype=float)
-
-    Place, Altitude, Snow_Depth = location_lookup(56,0,0,98,0,0)
-    Snow_Adder = Snow_Depth * np.array([0,1,1,1,1,0], dtype=float)
+    Snow_Adder = Snow_Depth * np.array([1,1,0,0,1,0], dtype=float)
 
     #Need to find altitude
     if Altitude > 1000:
-        Altitude_Adder = (Altitude - 1000)/100 * 0.01 * AEUC_clearance
+        Altitude_Adder = (Altitude - 1000) / 100 * 0.01 * AEUC_clearance
     else:
         Altitude_Adder = np.array([0,0,0,0,0,0], dtype=float)
 
@@ -187,6 +216,17 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     AEUC_total_clearance = AEUC_clearance + Repave_Adder + Snow_Adder + Altitude_Adder
     Design_clearance = AEUC_total_clearance + Buffer_live_array
 
+    #The following is to round all the values before they are sent to the table
+    AEUC_neut_clearance = np.round(AEUC_neut_clearance, Numpy_round_integer)
+    Repave_Adder = np.round(Repave_Adder, Numpy_round_integer)
+    Snow_Adder = np.round(Snow_Adder, Numpy_round_integer)
+    AEUC_total_clearance_neut = np.round(AEUC_total_clearance_neut, Numpy_round_integer)
+    Design_clearance_neut = np.round(Design_clearance_neut, Numpy_round_integer)
+    AEUC_clearance = np.round(AEUC_clearance, Numpy_round_integer)
+    Altitude_Adder = np.round(Altitude_Adder, Numpy_round_integer)
+    AEUC_total_clearance = np.round(AEUC_total_clearance, Numpy_round_integer)
+    Design_clearance = np.round(Design_clearance, Numpy_round_integer)
+
     #Creating a dictionary to turn into a dataframe
     data = {
         'AEUC base neutral': AEUC_neut_clearance,
@@ -197,17 +237,20 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 
         'AEUC base clearance': AEUC_clearance,
         'Altitude Adder': Altitude_Adder,
-        'Re-pave  Adder': Repave_Adder,
-        'Snow  Adder': Snow_Adder,
+        #Using the same repave and snow adders as above for conductors
         'AEUC total': AEUC_total_clearance,
         'Design clearance': Design_clearance,
+
+        'Voltage range': voltage_range,
+        'Column #': column,
         }
     
     #The following is a pandas dataframe and it is using the function from above to export the dataframe into an excel file
     #save2xl(data)
-    return AEUC_neut_clearance, Repave_Adder, Snow_Adder, AEUC_total_clearance_neut, Design_clearance_neut, AEUC_clearance, Altitude_Adder, Repave_Adder, Snow_Adder, AEUC_total_clearance, Design_clearance
+    return data
+#Running the AEUC table 5 function to get a dictionary that can be used in a webapp and used in the export to excel code later on
 AEUC5_input = {key: inputs[key] for key in ['p2p_voltage', 'Buffer_Neut', 'Buffer_Live']}
-AEUC_table5_clearance(**AEUC5_input)
+AEUC_Table5_data  = AEUC_table5_clearance(**AEUC5_input)
 
 #The following function is for AEUC table 7
 def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obstacles):
@@ -218,66 +261,65 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     AEUC_7.set_index("Wire or Conductor", inplace = True)
     
     #Specify the row that is being used for this
-    AEUC_neut_clearance = AEUC_7.loc['Guys communications cables, and drop wires'].values
+    AEUC_neut_clearance_basic = AEUC_7.loc['Guys communications cables, and drop wires'].values
+    AEUC_neut_clearance = Design_buffer_2_obstacles * np.ones(len(AEUC_neut_clearance_basic))
 
     if 0 < voltage <= 0.75:
         if sheathed == True:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0 - 750 V Enclosed in effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
         if grounded == True:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0 - 750 V Insulated or grounded'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
         else:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0 - 750 V Neither insulated or grounded or enclosed in effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
     elif 0.75 < voltage <= 22:
         if sheathed == False:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0.75 - 22kV Not enclosed in  effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
         else:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0.75 - 22kV Enclosed in effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
     else:
         #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['Over 22kV'].values
             AEUC_voltage_adder = (voltage - 22) * 0.01
 
+    #The following is to round all the values before they are sent to the table
+    AEUC_neut_clearance_basic = np.round(AEUC_neut_clearance_basic, Numpy_round_integer)
+    AEUC_clearance = np.round(AEUC_clearance, Numpy_round_integer)
+    AEUC_voltage_adder = np.round(AEUC_voltage_adder, Numpy_round_integer)
+    Design_buffer_2_obstacles = np.round(Design_buffer_2_obstacles, Numpy_round_integer)
+
     #Indexing certain elements in the array BA = basic, VA = Voltage Adder, AT = AEUC Total, DC = Design Clearance
-
-
-    H2building_BA = np.array([AEUC_neut_clearance[0], AEUC_clearance[0]])
+    H2building_BA = np.array([AEUC_neut_clearance_basic[0], AEUC_clearance[0]])
     H2building_VA = np.array([0, AEUC_voltage_adder])
-    H2building_AT = np.array([AEUC_neut_clearance[0], (AEUC_clearance[0] + AEUC_voltage_adder)])
+    H2building_AT = np.array([AEUC_neut_clearance_basic[0], (AEUC_clearance[0] + AEUC_voltage_adder)])
     H2building_DC = np.array([AEUC_neut_clearance[0], (AEUC_clearance[0] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
-    V2building_BA = np.array([AEUC_neut_clearance[1], AEUC_clearance[1]])
+    V2building_BA = np.array([AEUC_neut_clearance_basic[1], AEUC_clearance[1]])
     V2building_VA = H2building_VA
-    V2building_AT = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder)])
+    V2building_AT = np.array([AEUC_neut_clearance_basic[1], (AEUC_clearance[1] + AEUC_voltage_adder)])
     V2building_DC = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
 
-    H2object_BA = np.array([AEUC_neut_clearance[2], AEUC_clearance[2]])
+    H2object_BA = np.array([AEUC_neut_clearance_basic[2], AEUC_clearance[2]])
     H2object_VA = H2building_VA
-    H2object_AT = np.array([AEUC_neut_clearance[2], (AEUC_clearance[2] + AEUC_voltage_adder)])
+    H2object_AT = np.array([AEUC_neut_clearance_basic[2], (AEUC_clearance[2] + AEUC_voltage_adder)])
     H2object_DC = np.array([AEUC_neut_clearance[2], (AEUC_clearance[2] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
-    V2object_BA = np.array([AEUC_neut_clearance[3], AEUC_clearance[3]])
+    V2object_BA = np.array([AEUC_neut_clearance_basic[3], AEUC_clearance[3]])
     V2object_VA = H2building_VA
-    V2object_AT = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder)])
+    V2object_AT = np.array([AEUC_neut_clearance_basic[3], (AEUC_clearance[3] + AEUC_voltage_adder)])
     V2object_DC = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
     Categories = np.array(["Guys, communication cables, and drop wires", "Supply conductors"])
-
 
     #Creating a dictionary to turn into a dataframe
     data = {
@@ -305,9 +347,9 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     
     #The following is a pandas dataframe and it is using the function from above to export the dataframe into an excel file
     #save2xl(data)
-    return H2building_BA, H2building_VA, H2building_AT, H2building_DC, V2building_BA, V2building_VA, V2building_AT, V2building_DC, H2object_BA, H2object_VA, H2object_AT, H2object_DC, V2object_BA, V2object_VA, V2object_AT, V2object_DC
+    return data
 AEUC7_input = {key: inputs[key] for key in ['p2p_voltage', "grounded", "sheathed", 'Design_buffer_2_obstacles']}
-AEUC_table7_clearance(**AEUC7_input)
+AEUC_Table7_data = AEUC_table7_clearance(**AEUC7_input)
 
 #The following function is for CSA Table 2
 def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
@@ -322,39 +364,58 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     if  0 < voltage <= 0.75: 
         #this column is for 120-660V
         CSA_2_clearance = CSA_2['0-0.75']
+        voltage_range = '0-0.75'
+        column = 'III'
     elif voltage <=22: 
         #this column is for 4, 13 & 25 kV
         CSA_2_clearance = CSA_2['0.75-22']
+        voltage_range = '> 0.75 ≤ 22'
+        column = 'IV'
     elif voltage <=50: 
         #this column is for 35, 69 & 72 kV
         CSA_2_clearance = CSA_2['22-50']
+        voltage_range = '> 22 ≤ 50'
+        column = 'V'
     elif voltage <=90: 
         #this column is for 138 & 144 kV
         CSA_2_clearance = CSA_2['50-90']
+        voltage_range = '> 50 ≤ 90'
+        column = 'VI'
     elif voltage <=120: 
         #this column is for 240 kV
         CSA_2_clearance = CSA_2['90-120']
+        voltage_range = '> 90 ≤ 120'
+        column = 'VII'
     elif voltage <=150: 
         #this column is for 500 kV
         CSA_2_clearance = CSA_2['120-150']
+        voltage_range = '> 120 ≤ 150'
+        column = 'VIII'
     elif voltage <=190: 
         #this column is for 500 kV
         CSA_2_clearance = CSA_2['150-190']
+        voltage_range = '> 150 ≤ 190'
+        column = 'IX'
     elif voltage == 360: 
         #this column is for 360 kV
         CSA_2_clearance = CSA_2['219']
+        voltage_range = '219 (360)'
+        column = 'X'
     elif voltage == 500: 
         #this column is for 500 kV
         CSA_2_clearance = CSA_2['318']
+        voltage_range = '318 (500)'
+        column = 'XI'
     else: 
         #this column is for 735 kV
         CSA_2_clearance = CSA_2['442']
+        voltage_range = '442 (735)'
+        column = 'XII'
 
     Repave_Adder = np.array([0.225,0,0,0.225,0,0.3], dtype=float)
 
     #Need to find mean annual snow depth
-    Place, Altitude, Snow_Depth = location_lookup(56,0,0,98)
-    Snow_Adder = Snow_Depth/100 * np.array([0,1,1,1,1,0], dtype=float)
+    Snow_Adder = Snow_Depth * np.array([0,1,1,1,1,0], dtype=float)
 
     #Need to find altitude
     if Altitude > 1000:
@@ -368,23 +429,37 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     Neutral_DC = Buffer_Neut + Neutral_CSA_Total
     CSA_DC = Buffer_Live + CSA_Total
 
+    CSA_2_neut_clearance = np.round(CSA_2_neut_clearance, Numpy_round_integer)
+    Repave_Adder = np.round(Repave_Adder, Numpy_round_integer)
+    Snow_Adder = np.round(Snow_Adder, Numpy_round_integer)
+    Neutral_CSA_Total = np.round(Neutral_CSA_Total, Numpy_round_integer)
+    Neutral_DC = np.round(Neutral_DC, Numpy_round_integer)
+    CSA_2_clearance = np.round(CSA_2_clearance, Numpy_round_integer)
+    Altitude_Adder = np.round(Altitude_Adder, Numpy_round_integer)
+    CSA_Total = np.round(CSA_Total, Numpy_round_integer)
+    CSA_DC = np.round(CSA_DC, Numpy_round_integer)
+
     data = {
         'Neutral Basic (m)': CSA_2_neut_clearance,
-        'Neutral Re-pave Adder (m)': Repave_Adder,
-        'Neutral Snow Adder (m)': Snow_Adder,
+        'Re-pave Adder (m)': Repave_Adder,
+        'Snow Adder (m)': Snow_Adder,
         'Neutral CSA Total (m)': Neutral_CSA_Total,
         'Neutral Design Clearance (m)': Neutral_DC,
 
-        'Basic (m)': CSA_2_neut_clearance,
+        'Basic (m)': CSA_2_clearance,
         'Altitude Adder (m)': Altitude_Adder,
-        'Re-pave Adder (m)': Repave_Adder,
-        'Snow Adder (m)': Snow_Adder,
+        #Same Re-pave and Snow adder used as in above
         'CSA Total (m)': CSA_Total,
         'Design Clearance (m)': CSA_DC,
+
+        #This will only be used for the excel doc
+        'Voltage range': voltage_range,
+        'Column #': column,
         }
-    return()
+    
+    return data
 CSA2_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
-CSA_Table_2_clearance(**CSA2_input)
+CSA_Table2_data = CSA_Table_2_clearance(**CSA2_input)
 
 #The following function is for CSA Table 3
 def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
@@ -398,19 +473,21 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 
     if  0 < voltage <= 22: 
         CSA_3_clearance = CSA_3['0-22']
+        voltage_range = '0-22'
     elif voltage <=50: 
         CSA_3_clearance = CSA_3['>22<50']
+        voltage_range = '> 22 ≤ 50'
     elif voltage <=90: 
         CSA_3_clearance = CSA_3['>50<90']
+        voltage_range = '> 50 ≤ 90'
     elif voltage <=150: 
         CSA_3_clearance = CSA_3['>90<150']
+        voltage_range = '> 90 ≤ 150'
     else: 
         CSA_3_clearance = CSA_3['>150 + 0.01m/kV over 150kV'] + np.ones(8)*0.1*(voltage-150)
-
-    Place,Altitude,Snow = location_lookup(56, 0, 0, -98.5, 0, 0)
+        voltage_range = '> 150'
 
     #Need to find altitude
-
     if Altitude > 1000:
         Altitude_Adder = (Altitude - 1000)/100 * 0.01 * CSA_3_clearance
     else:
@@ -421,6 +498,13 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     Neutral_DC = Buffer_Neut + CSA_3_neut_clearance
     CSA_DC = Buffer_Live + CSA_Total
 
+    CSA_3_neut_clearance = np.round(CSA_3_neut_clearance, Numpy_round_integer)
+    Neutral_DC = np.round(Neutral_DC, Numpy_round_integer)
+    CSA_3_clearance = np.round(CSA_3_clearance, Numpy_round_integer)
+    Altitude_Adder = np.round(Altitude_Adder, Numpy_round_integer)
+    CSA_Total = np.round(CSA_Total, Numpy_round_integer)
+    CSA_DC = np.round(CSA_DC, Numpy_round_integer)
+
     data = {
         'Neutral Basic (m)': CSA_3_neut_clearance,
         'Neutral Design Clearance (m)': Neutral_DC,
@@ -429,11 +513,13 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         'Altitude Adder (m)': Altitude_Adder,
         'CSA Total (m)': CSA_Total,
         'Design Clearance (m)': CSA_DC,
+
+        'Voltage range': voltage_range,
         }
 
-    return()
+    return data
 CSA3_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
-CSA_Table_3_clearance(**CSA3_input)
+CSA_Table3_data = CSA_Table_3_clearance(**CSA3_input)
 
 #The following function is for CSA Table 5
 def CSA_Table_5_clearance(p2p_voltage, Buffer_Live):
@@ -480,17 +566,17 @@ def create_report_excel():
 
 #AEUC Table 5
 #region
-    AEUC_neut_clearance, Repave_Adder, Snow_Adder, AEUC_total_clearance_neut, Design_clearance_neut, AEUC_clearance, Altitude_Adder, Repave_Adder, Snow_Adder, AEUC_total_clearance, Design_clearance  = AEUC_table5_clearance(138, 0.5, 0.5) 
+    #Creating the title blocks. etc
     AEUC5_cell00 = 'Over walkways or land normally accessible only to pedestrians, snowmobiles, and all terrain vehicles not exceeding 3.6m'
     AEUC5_cell10 = 'Over rights of way of underground pipelines operating at a pressure of over 700 kilopascals; equipment not exceeding 4.15m'
     AEUC5_cell20 = 'Over land likely to be travelled by road vehicles (including roadways, streets, lanes, alleys, driveways, and entrances); equipment not exceeding 4.15m'
     AEUC5_cell30 = 'Over land likely to be travelled by road vehicles (including highways, roadways, streets, lanes, alleys, driveways, and entrances); equipment not exceeding 5.3m'
     AEUC5_cell40 = 'Over land likely to be travelled by agricultural or other equipment; equipment not exceeding 5.3m'
     AEUC5_cell50 = 'Above top of rails at railway crossings, equipment not exceeding 7.2m'
-    voltage = 138
-    elevation = 100
-    voltage_range = "138 & 144 kV"
-    col = "Col V"
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+    voltage_range = AEUC_Table5_data['Voltage range']
+    col = 'Col. ' + AEUC_Table5_data['Column #']
 
     AEUC5_titles = np.array([AEUC5_cell00, AEUC5_cell10, AEUC5_cell20, AEUC5_cell30, AEUC5_cell40, AEUC5_cell50])
     
@@ -501,12 +587,13 @@ def create_report_excel():
         [' '],
         [' ', 'Guys, Messengers, Span & Lightening Protection Wires and Communications Wires and Cables', ' ', ' ', ' ', ' ', 'Voltage of Open Supply Conductors and Service Conductors Voltage Line to Ground kV AC except where note (Voltages in Parentheses are AC Phase to Phase) ' + str(voltage_range)],
         [' '],
-        [' ', 'Col 1', ' ', ' ', ' ', ' ' , col],
+        [' ', 'Col. I', ' ', ' ', ' ', ' ' , col],
         [' ', 'Basic (m)', 'Re-pave Adder (m)', "Snow Adder (m)", "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", 'Re-pave Adder (m)', "Snow Adder (m)", "AEUC Total (m)", "Design Clearance (m)"],
               ]
     #The following will fill out the rest of the table with numbers in their respective problems
-    for i in range(5):
-        row = [AEUC5_titles[i], AEUC_neut_clearance[i], Repave_Adder[i], Snow_Adder[i], AEUC_total_clearance_neut[i], Design_clearance_neut[i], AEUC_clearance[i], Altitude_Adder[i], Repave_Adder[i], Snow_Adder[i], AEUC_total_clearance[i], Design_clearance[i]]
+    for i in range(6):
+        row = [AEUC5_titles[i], AEUC_Table5_data['AEUC base neutral'][i], AEUC_Table5_data['Re-pave Adder'][i], AEUC_Table5_data['Snow Adder'][i], AEUC_Table5_data['AEUC total neutral'][i], AEUC_Table5_data['Design clearance neutral'][i], \
+               AEUC_Table5_data['AEUC base clearance'][i], AEUC_Table5_data['Altitude Adder'][i], AEUC_Table5_data['Re-pave Adder'][i], AEUC_Table5_data['Snow Adder'][i], AEUC_Table5_data['AEUC total'][i], AEUC_Table5_data['Design clearance'][i]]
         AEUC_5.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -550,13 +637,12 @@ def create_report_excel():
 
 #AEUC Table 7
 #region
-    H2building_BA, H2building_VA, H2building_AT, H2building_DC, V2building_BA, V2building_VA, V2building_AT, V2building_DC, H2object_BA, H2object_VA, H2object_AT, H2object_DC, V2object_BA, V2object_VA, V2object_AT, V2object_DC = AEUC_table7_clearance(138, True, True, 0.5)
     AEUC7_cell00 = 'Guys, communication cables, and drop wires'
     AEUC7_cell10 = 'Supply conductors'
-    voltage = 138
-    elevation = 100
-    voltage_range = "138 & 144 kV"
-    col = "Col V"
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+    voltage_range = AEUC_Table5_data['Voltage range']
+    col = 'Col. ' + AEUC_Table5_data['Column #']
 
     AEUC7_titles = np.array([AEUC7_cell00, AEUC7_cell10])
     
@@ -565,13 +651,17 @@ def create_report_excel():
         ['AEUC table 7 \n Minimum Design Clearances from Wires and Conductors Not Attached to Buildings, Signs, and Similar Plant \n  (See Rule 10-002 (8) and CSA C22-3 No. 1-10 Clauses 5.7.3.1 & 5.7.3.3.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
         [' '],
         [' '],
-        ['Wire or Conductor', 'Buildings',' ',' ',' ',' ',' ',' ',' ',' ', 'Signs, billboards, lamp and traffic sign standards, above ground pipelines, and similar plant', ],
-        [' ', 'Horizontal to surface', ' ', ' ', ' ', 'vertical to surface', ' ', ' ', ' ', 'Horizontal to surface', ' ', ' ', ' ', 'vertical to surface', ' ', ' ', ' '],
+        ['Wire or Conductor', 'Buildings',' ',' ',' ',' ',' ',' ',' ', 'Signs, billboards, lamp and traffic sign standards, above ground pipelines, and similar plant',' ',' ',' ',' ',' ',' ',' '],
+        [' ', 'Horizontal to surface', ' ', ' ', ' ', 'Vertical to surface', ' ', ' ', ' ', 'Horizontal to surface', ' ', ' ', ' ', 'Vertical to surface', ' ', ' ', ' '],
         [' ', 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)"],
               ]
+    
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(2):
-        row = [AEUC7_titles[i], H2building_BA[i], H2building_VA[i], H2building_AT[i], H2building_DC[i], V2building_BA[i], V2building_VA[i], V2building_AT[i], V2building_DC[i], H2object_BA[i], H2object_VA[i], H2object_AT[i], H2object_DC[i], V2object_BA[i], V2object_VA[i], V2object_AT[i], V2object_DC[i]]
+        row = [AEUC7_titles[i], AEUC_Table7_data['Building Horizontal to Surface Basic'][i], AEUC_Table7_data['Building Horizontal to Surface Voltage Adder'][i], AEUC_Table7_data['Building Horizontal to Surface AEUC Total'][i], AEUC_Table7_data['Building Horizontal to Surface Design Clearance'][i],
+               AEUC_Table7_data['Building Vertical to Surface Basic'][i], AEUC_Table7_data['Building Vertical to Surface Voltage Adder'][i], AEUC_Table7_data['Building Vertical to Surface AEUC Total'][i], AEUC_Table7_data['Building Vertical to Surface Clearance'][i],\
+               AEUC_Table7_data['Obstacle Horizontal to Surface Basic'][i], AEUC_Table7_data['Obstacle Horizontal to Surface Voltage Adder'][i], AEUC_Table7_data['Obstacle Horizontal to Surface AEUC Total'][i], AEUC_Table7_data['Obstacle Horizontal to Surface Clearance'][i],\
+               AEUC_Table7_data['Obstacle Vertical to Surface Basic'][i], AEUC_Table7_data['Obstacle Vertical to Surface Voltage Adder'][i], AEUC_Table7_data['Obstacle Vertical to Surface AEUC Total'][i], AEUC_Table7_data['Obstacle Vertical to Surface Clearance'][i]]
         AEUC_7.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -613,9 +703,154 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 2
+#region
+    #Creating the title blocks. etc
+    CSA2_cell00 = 'Over land, or alongside land (within the maximum horizontal swing plus flashover distance) likely to be travelled by road vehicles (including roadways, streets, lanes, alleys, driveways and enterances); H = 4.15m'
+    CSA2_cell10 = 'Over or land likely to be travelled by agricultural or other equipment, including access roads to farm fields or entrances to farmyards. Over the right-of-way of underground pipelines; H = 4.15m'
+    CSA2_cell20 = 'Over land likely to be travelled by off-road vehicles, riders on horses or other large animals; H = 3.6m'
+    CSA2_cell30 = 'Over land within the road right-of-way inaccessible to road vehicles; H = 2.9m'
+    CSA2_cell40 = 'Over walkways or land normally accessible only to pedestrians, snowmobiles, and personal-use all-terrain vehicles; H = 2.4m'
+    CSA2_cell50 = 'Above top of rails at railway crossings; H = 6.7m'
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+    voltage_range = CSA_Table2_data['Voltage range']
+    col = 'Col. ' + CSA_Table2_data['Column #']
+
+    CSA2_titles = np.array([CSA2_cell00, CSA2_cell10, CSA2_cell20, CSA2_cell30, CSA2_cell40, CSA2_cell50])
+    
+    CSA2 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 2 \n Minimum Vertical Design Clearances above Ground or Rails, ac \n (See clauses 5.3.1.1, 5.7.4.1 and A.5.3.1 and tables 9 and 11.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase), Site Elevation: '+ str(elevation) +' m'],
+        [' '],
+        [' '],
+        [' ', 'Guys, messengers, communication, span & lightning protection wires; communication cables', ' ', ' ', ' ', ' ', 'Open Supply Conductors and Service Conductors, ac' + str(voltage_range) + ' kV'],
+        [' '],
+        [' ', 'Col. II', ' ', ' ', ' ', ' ' , col],
+        [' ', 'Basic (m)', 'Re-pave Adder (m)', "Snow Adder (m)", "CSA Total (m)", "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", 'Re-pave Adder (m)', "Snow Adder (m)", "CSA Total (m)", "Design Clearance (m)"],
+              ]
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(6):
+        row = [CSA2_titles[i], CSA_Table2_data['Neutral Basic (m)'][i], CSA_Table2_data['Re-pave Adder (m)'][i], CSA_Table2_data['Snow Adder (m)'][i], CSA_Table2_data['Neutral CSA Total (m)'][i], CSA_Table2_data['Neutral Design Clearance (m)'][i], \
+               CSA_Table2_data['Basic (m)'][i], CSA_Table2_data['Altitude Adder (m)'][i], CSA_Table2_data['Re-pave Adder (m)'][i], CSA_Table2_data['Snow Adder (m)'][i], CSA_Table2_data['CSA Total (m)'][i], CSA_Table2_data['Design Clearance (m)'][i]]
+        CSA2.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_2 = len(CSA2)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_2 = len(CSA2[7])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA2 = []
+    for i in range(n_row_CSA_table_2):
+        if i < 3:
+            list_range_color_CSA2.append((i + 1, 1, i + 1, n_column_CSA_table_2, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA2.append((i + 1, 1, i + 1, n_column_CSA_table_2, color_bkg_data_1))
+        else:
+            list_range_color_CSA2.append((i + 1, 1, i + 1, n_column_CSA_table_2, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_2 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_2, 'center'), (4, 2, 5, 6, 'center'), (4, 1, 6, 1, 'center'), (4, 7, 5, 12, 'center'), (6, 2, 6, 6, 'center'), (6, 7, 6, 12, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA2,
+        'range_border': [(1, 1, 1, n_column_CSA_table_2), (2, 1, n_row_CSA_table_2, n_column_CSA_table_2)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 20) for i in range(n_column_CSA_table_2)],
+    }
+
+    # define some footer notes
+    footer_CSA2 = ['Re-pave addition to CSA C22.3 No.1 clause 5.3.1.1 (c) & (d).', 'Snow addition to CSA C22.3 No.1 clause 5.3.1.1 (e) table D1.', 'Altitude addition to CSA C22.3 No.1 clause 5.3.1.1 (b).',\
+                   'For places that permit the combined vehicle and load height to exceed 4.15 m, the applicable clearance specified in rows I and II shall be increased by the amount by which the allowable combined vehicle and load height exceeds 4.15 m. E.g. High road corridors, railway operating yards, see clauses 5.3.1.2 and A.5.3.1.2.',\
+                   'Where noted, minimum clearances shall be based on induced electrostatic steady-state currents. They shall be calculated considering but not limited to the following; line overvoltage, line and conductor configuration, conductor diameter, largest expected vehicle, and line-to-road crossing angle.']
+
+    # define the worksheet
+    CSA_Table_2 = {
+        'ws_name': 'CSA Table 2',
+        'ws_content': CSA2,
+        'cell_range_style': cell_format_CSA_2,
+        'footer': footer_CSA2
+    }
+#endregion
+
+#CSA Table 3
+#region
+    #Creating the title blocks. etc
+    CSA3_cell00 = 'Minor waterways'
+    CSA3_cell10 = 'Shallow or fast-moving waterways capable of being used by canoes and paddle boats in isolated areas where motor boats are not expected. \n Creeks and streams: W = 3–50 m and D < 1 m \n Ponds: A < 8 ha and D < 1 m \n H = 4.0 m'
+    CSA3_cell20 = 'Shallow or fast-moving waterways capable of being used by motorboats with antennas and unable to support masted vessels \n Creeks and streams: W = 3–50 m and D < 1 m \n Ponds: A < 8 ha and D < 1 m  \n H = 6.0 m'
+    CSA3_cell30 = 'Small lakes and rivers used by masted vessels \n Rivers: W = 3–50 m and D > 1 m \n Ponds and lakes: A < 8 ha and D > 1 m \n H = 8.0 m'
+    CSA3_cell40 = 'Small resort lakes, medium-sized rivers and reservoirs, rivers connecting lakes, and crossings adjacent to bridges and roads \n Rivers: W = 50–500 m  \n Lakes/reservoirs: 8 ha < A < 80 ha  \n H = 10.0 m'
+    CSA3_cell50 = 'Large lakes, reservoirs, and main rivers in resort areas \n Rivers: W > 500 m  \n Lakes/reservoirs 80 ha < A < 800 ha  \n H = 12.0 m'
+    CSA3_cell60 = 'Federally maintained commercial channels, rivers, harbours, or heritage canals'
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+    voltage_range = CSA_Table3_data['Voltage range']
+
+    CSA3_titles = np.array([CSA3_cell00, CSA3_cell10, CSA3_cell20, CSA3_cell30, CSA3_cell40, CSA3_cell50, CSA3_cell60])
+    
+    CSA3 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 3 \n Minimum Vertical Design Clearances above Waterways*, ac \n (See clause 5.3.3.2.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        [' ', 'Minimum clearance above OHWM, m'],
+        ['Type of waterways crossed: \n A = water areas \n D = water depth \n W = water width \n H = reference vessel height‡', 'Guys, messengers, communication, span & lightning protection wires; communication cables', ' ', ' ', ' ', ' ', 'Open Supply Conductors and Service Conductors, ac ' + str(voltage_range) + ' kV'],
+        [' '],
+        [' ', 'Basic (m)', "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", "CSA Total (m)", "Design Clearance (m)"],
+              ]
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(7):
+        row = [CSA3_titles[i], CSA_Table3_data['Neutral Basic (m)'][i], CSA_Table3_data['Neutral Design Clearance (m)'][i], CSA_Table3_data['Basic (m)'][i], CSA_Table3_data['Altitude Adder (m)'][i], CSA_Table3_data['CSA Total (m)'][i], CSA_Table3_data['Design Clearance (m)'][i]]
+        CSA3.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_3 = len(CSA3)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_3 = len(CSA3[7])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA3 = []
+    for i in range(n_row_CSA_table_3):
+        if i < 3:
+            list_range_color_CSA3.append((i + 1, 1, i + 1, n_column_CSA_table_3, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA3.append((i + 1, 1, i + 1, n_column_CSA_table_3, color_bkg_data_1))
+        else:
+            list_range_color_CSA3.append((i + 1, 1, i + 1, n_column_CSA_table_3, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_3 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_3, 'center'), (4, 2, 5, 6, 'center'), (4, 1, 6, 1, 'center'), (4, 7, 5, 12, 'center'), (6, 2, 6, 6, 'center'), (6, 7, 6, 12, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA3,
+        'range_border': [(1, 1, 1, n_column_CSA_table_3), (2, 1, n_row_CSA_table_3, n_column_CSA_table_3)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 20) for i in range(n_column_CSA_table_3)],
+    }
+
+    # define some footer notes
+    footer_CSA3 = ['* The clearance over a canal, river, or stream normally used to provide access for sailboats to a larger body of water shall be the same as that required for the larger body of water.',
+                   '‡ Reference vessel height refers to the overall height of the vessel, including the heights of antennas or other attachments.', 
+                   '§ In Canada, clearances are specified by the Transport Canada office responsible for the coastal regions, Great Lakes system, Red River–Lake Winnipeg system, Mackenzie River, and interior lakes of British Columbia. Where tide water has an effect on a body of water being crossed, the vertical design clearance shall be increased by an amount that takes into account peak tide.']
+
+    # define the worksheet
+    CSA_Table_3 = {
+        'ws_name': 'CSA Table 3',
+        'ws_content': CSA3,
+        'cell_range_style': cell_format_CSA_3,
+        'footer': footer_CSA3
+    }
+#endregion
 
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7]
+    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2]
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)

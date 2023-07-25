@@ -65,7 +65,6 @@ inputs = {
         'lower wire':True,
         'XING_P2P_Voltage':79,
         'XING_Max_Overvoltage':0.05,
-
 }
 
 #The following function takes the decimal points in the dictionary and turns that into an integer to use in np.round in all functions
@@ -75,10 +74,10 @@ def decimal_points(num):
         return len(num_str.split('.')[1])
     else:
         return 0
+#Taking the clearance decimals from the input and running it through the decimal point function to create an integer to use in np.round
 Clearance_Rounding = {key: inputs[key] for key in ['Clearance_Rounding']}
 Nums_after_decimal = Clearance_Rounding['Clearance_Rounding']
 Numpy_round_integer = decimal_points(Nums_after_decimal)
-
 
 #The following function will take an dictionary and export it into excel using pandas(useful for troubleshooting dictionary outputs)
 def save2xl(x):
@@ -134,9 +133,9 @@ def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, 
 
     #The following will return the values as calculated by the function to the user.
     return Closest_place_name, Closest_elevation, Max_snow_depth
-
-#The following runs the location_lookup function with the dictionary inputs for use in code going forwards
+#The following runs the location_lookup function with the dictionary inputs for use in the code going forwards
 loc_lookup_input = {key: inputs[key] for key in ['Northing_deg', 'Northing_mins', 'Northing_seconds', 'Westing_deg', 'Westing_mins', 'Westing_seconds']}
+#These variables can be called upon later in the script when they are needed
 Place, Altitude, Snow_Depth = location_lookup(**loc_lookup_input)
 
 #The following function will take inputs and create output arrays that can be inserted into a table
@@ -154,24 +153,38 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     if  0 < voltage <= 0.75: 
         #this column is for 120-660V
         AEUC_clearance = AEUC_5['0 to 0.75']
+        voltage_range = '120-600V'
+        column = "II"
     elif voltage <=25: 
         #this column is for 4, 13 & 25 kV
         AEUC_clearance = AEUC_5['0.75 to 22']
+        voltage_range = '4, 13 & 25 kV'
+        column = "III"
     elif voltage <=50: 
         #this column is for 35, 69 & 72 kV
         AEUC_clearance = AEUC_5['22 to 50']
+        voltage_range = '35, 69 & 72 kV'
+        column = "IV"
     elif voltage <=90: 
         #this column is for 138 & 144 kV
         AEUC_clearance = AEUC_5['50 to 90']
+        voltage_range = '138 & 144 kV'
+        column = "V"
     elif voltage <=150: 
         #this column is for 240 kV
         AEUC_clearance = AEUC_5['120 to 150']
+        voltage_range = '240 kV'
+        column = "VI"
     elif voltage <=318: 
         #this column is for 500 kV
         AEUC_clearance = AEUC_5['318']
+        voltage_range = '500 kV'
+        column = "VII"
     else: 
         #this column is for 1000 kV Pole-Pole
         AEUC_clearance = AEUC_5['+/- 500 kVDC']
+        voltage_range = '1000 kVDC Pole-to-Pole'
+        column = "VIII"
 
     #Adders will have to be multiplied by a series so that it only applies to the correct rows
     """ 
@@ -226,17 +239,20 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 
         'AEUC base clearance': AEUC_clearance,
         'Altitude Adder': Altitude_Adder,
-        'Re-pave  Adder': Repave_Adder,
-        'Snow  Adder': Snow_Adder,
+        #Using the same repave and snow adders as above for conductors
         'AEUC total': AEUC_total_clearance,
         'Design clearance': Design_clearance,
+
+        'Voltage range': voltage_range,
+        'Column #': column,
         }
     
     #The following is a pandas dataframe and it is using the function from above to export the dataframe into an excel file
     #save2xl(data)
-    return AEUC_neut_clearance, Repave_Adder, Snow_Adder, AEUC_total_clearance_neut, Design_clearance_neut, AEUC_clearance, Altitude_Adder, Repave_Adder, Snow_Adder, AEUC_total_clearance, Design_clearance
+    return data
+#Running the AEUC table 5 function to get a dictionary that can be used in a webapp and used in the export to excel code later on
 AEUC5_input = {key: inputs[key] for key in ['p2p_voltage', 'Buffer_Neut', 'Buffer_Live']}
-AEUC_table5_clearance(**AEUC5_input)
+AEUC_Table5_data  = AEUC_table5_clearance(**AEUC5_input)
 
 #The following function is for AEUC table 7
 def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obstacles):
@@ -306,9 +322,6 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     V2object_DC = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
     Categories = np.array(["Guys, communication cables, and drop wires", "Supply conductors"])
-    
-    
-
 
     #Creating a dictionary to turn into a dataframe
     data = {
@@ -336,9 +349,10 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     
     #The following is a pandas dataframe and it is using the function from above to export the dataframe into an excel file
     #save2xl(data)
-    return H2building_BA, H2building_VA, H2building_AT, H2building_DC, V2building_BA, V2building_VA, V2building_AT, V2building_DC, H2object_BA, H2object_VA, H2object_AT, H2object_DC, V2object_BA, V2object_VA, V2object_AT, V2object_DC
+    return data
 AEUC7_input = {key: inputs[key] for key in ['p2p_voltage', "grounded", "sheathed", 'Design_buffer_2_obstacles']}
-AEUC_table7_clearance(**AEUC7_input)
+AEUC_Table7_data = AEUC_table7_clearance(**AEUC7_input)
+
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -358,17 +372,17 @@ def create_report_excel():
 
 #AEUC Table 5
 #region
-    AEUC_neut_clearance, Repave_Adder, Snow_Adder, AEUC_total_clearance_neut, Design_clearance_neut, AEUC_clearance, Altitude_Adder, Repave_Adder, Snow_Adder, AEUC_total_clearance, Design_clearance  = AEUC_table5_clearance(**AEUC5_input)
+    #Creating the title blocks. etc
     AEUC5_cell00 = 'Over walkways or land normally accessible only to pedestrians, snowmobiles, and all terrain vehicles not exceeding 3.6m'
     AEUC5_cell10 = 'Over rights of way of underground pipelines operating at a pressure of over 700 kilopascals; equipment not exceeding 4.15m'
     AEUC5_cell20 = 'Over land likely to be travelled by road vehicles (including roadways, streets, lanes, alleys, driveways, and entrances); equipment not exceeding 4.15m'
     AEUC5_cell30 = 'Over land likely to be travelled by road vehicles (including highways, roadways, streets, lanes, alleys, driveways, and entrances); equipment not exceeding 5.3m'
     AEUC5_cell40 = 'Over land likely to be travelled by agricultural or other equipment; equipment not exceeding 5.3m'
     AEUC5_cell50 = 'Above top of rails at railway crossings, equipment not exceeding 7.2m'
-    voltage = 138
-    elevation = 100
-    voltage_range = "138 & 144 kV"
-    col = "Col V"
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+    voltage_range = AEUC_Table5_data['Voltage range']
+    col = 'Col. ' + AEUC_Table5_data['Column #']
 
     AEUC5_titles = np.array([AEUC5_cell00, AEUC5_cell10, AEUC5_cell20, AEUC5_cell30, AEUC5_cell40, AEUC5_cell50])
     
@@ -379,12 +393,13 @@ def create_report_excel():
         [' '],
         [' ', 'Guys, Messengers, Span & Lightening Protection Wires and Communications Wires and Cables', ' ', ' ', ' ', ' ', 'Voltage of Open Supply Conductors and Service Conductors Voltage Line to Ground kV AC except where note (Voltages in Parentheses are AC Phase to Phase) ' + str(voltage_range)],
         [' '],
-        [' ', 'Col 1', ' ', ' ', ' ', ' ' , col],
+        [' ', 'Col. I', ' ', ' ', ' ', ' ' , col],
         [' ', 'Basic (m)', 'Re-pave Adder (m)', "Snow Adder (m)", "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", 'Re-pave Adder (m)', "Snow Adder (m)", "AEUC Total (m)", "Design Clearance (m)"],
               ]
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(6):
-        row = [AEUC5_titles[i], AEUC_neut_clearance[i], Repave_Adder[i], Snow_Adder[i], AEUC_total_clearance_neut[i], Design_clearance_neut[i], AEUC_clearance[i], Altitude_Adder[i], Repave_Adder[i], Snow_Adder[i], AEUC_total_clearance[i], Design_clearance[i]]
+        row = [AEUC5_titles[i], AEUC_Table5_data['AEUC base neutral'][i], AEUC_Table5_data['Re-pave Adder'][i], AEUC_Table5_data['Snow Adder'][i], AEUC_Table5_data['AEUC total neutral'][i], AEUC_Table5_data['Design clearance neutral'][i], \
+               AEUC_Table5_data['AEUC base clearance'][i], AEUC_Table5_data['Altitude Adder'][i], AEUC_Table5_data['Re-pave Adder'][i], AEUC_Table5_data['Snow Adder'][i], AEUC_Table5_data['AEUC total'][i], AEUC_Table5_data['Design clearance'][i]]
         AEUC_5.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -428,13 +443,12 @@ def create_report_excel():
 
 #AEUC Table 7
 #region
-    H2building_BA, H2building_VA, H2building_AT, H2building_DC, V2building_BA, V2building_VA, V2building_AT, V2building_DC, H2object_BA, H2object_VA, H2object_AT, H2object_DC, V2object_BA, V2object_VA, V2object_AT, V2object_DC = AEUC_table7_clearance(**AEUC7_input)
     AEUC7_cell00 = 'Guys, communication cables, and drop wires'
     AEUC7_cell10 = 'Supply conductors'
-    voltage = 138
-    elevation = 100
-    voltage_range = "138 & 144 kV"
-    col = "Col V"
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+    voltage_range = AEUC_Table5_data['Voltage range']
+    col = 'Col. ' + AEUC_Table5_data['Column #']
 
     AEUC7_titles = np.array([AEUC7_cell00, AEUC7_cell10])
     
@@ -443,13 +457,17 @@ def create_report_excel():
         ['AEUC table 7 \n Minimum Design Clearances from Wires and Conductors Not Attached to Buildings, Signs, and Similar Plant \n  (See Rule 10-002 (8) and CSA C22-3 No. 1-10 Clauses 5.7.3.1 & 5.7.3.3.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
         [' '],
         [' '],
-        ['Wire or Conductor', 'Buildings',' ',' ',' ',' ',' ',' ',' ',' ', 'Signs, billboards, lamp and traffic sign standards, above ground pipelines, and similar plant', ],
-        [' ', 'Horizontal to surface', ' ', ' ', ' ', 'vertical to surface', ' ', ' ', ' ', 'Horizontal to surface', ' ', ' ', ' ', 'vertical to surface', ' ', ' ', ' '],
+        ['Wire or Conductor', 'Buildings',' ',' ',' ',' ',' ',' ',' ', 'Signs, billboards, lamp and traffic sign standards, above ground pipelines, and similar plant',' ',' ',' ',' ',' ',' ',' '],
+        [' ', 'Horizontal to surface', ' ', ' ', ' ', 'Vertical to surface', ' ', ' ', ' ', 'Horizontal to surface', ' ', ' ', ' ', 'Vertical to surface', ' ', ' ', ' '],
         [' ', 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', 'Voltage Adder (m)', "AEUC Total (m)", "Design Clearance (m)"],
               ]
+    
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(2):
-        row = [AEUC7_titles[i], H2building_BA[i], H2building_VA[i], H2building_AT[i], H2building_DC[i], V2building_BA[i], V2building_VA[i], V2building_AT[i], V2building_DC[i], H2object_BA[i], H2object_VA[i], H2object_AT[i], H2object_DC[i], V2object_BA[i], V2object_VA[i], V2object_AT[i], V2object_DC[i]]
+        row = [AEUC7_titles[i], AEUC_Table7_data['Building Horizontal to Surface Basic'][i], AEUC_Table7_data['Building Horizontal to Surface Voltage Adder'][i], AEUC_Table7_data['Building Horizontal to Surface AEUC Total'][i], AEUC_Table7_data['Building Horizontal to Surface Design Clearance'][i],
+               AEUC_Table7_data['Building Vertical to Surface Basic'][i], AEUC_Table7_data['Building Vertical to Surface Voltage Adder'][i], AEUC_Table7_data['Building Vertical to Surface AEUC Total'][i], AEUC_Table7_data['Building Vertical to Surface Clearance'][i],\
+               AEUC_Table7_data['Obstacle Horizontal to Surface Basic'][i], AEUC_Table7_data['Obstacle Horizontal to Surface Voltage Adder'][i], AEUC_Table7_data['Obstacle Horizontal to Surface AEUC Total'][i], AEUC_Table7_data['Obstacle Horizontal to Surface Clearance'][i],\
+               AEUC_Table7_data['Obstacle Vertical to Surface Basic'][i], AEUC_Table7_data['Obstacle Vertical to Surface Voltage Adder'][i], AEUC_Table7_data['Obstacle Vertical to Surface AEUC Total'][i], AEUC_Table7_data['Obstacle Vertical to Surface Clearance'][i]]
         AEUC_7.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -490,7 +508,6 @@ def create_report_excel():
         'footer': footer_AEUC7
     }
 #endregion
-
 
     #This determines the workbook and the worksheets within the workbook
     workbook_content = [AEUC_Table_5, AEUC_Table_7]
