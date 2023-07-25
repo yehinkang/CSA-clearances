@@ -797,21 +797,21 @@ def create_report_excel():
     voltage_range = CSA_Table3_data['Voltage range']
 
     CSA3_titles = np.array([CSA3_cell00, CSA3_cell10, CSA3_cell20, CSA3_cell30, CSA3_cell40, CSA3_cell50, CSA3_cell60])
-    
+    CSA3_Crossing_Class = np.arange(7)
     CSA3 = [
     #The following is the title header before there is data
         ['CSA C22-3 No. 1-20 Table 3 \n Minimum Vertical Design Clearances above Waterways*, ac \n (See clause 5.3.3.2.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
         [' '],
         [' '],
         [' ', 'Minimum clearance above OHWM, m'],
-        ['Type of waterways crossed: \n A = water areas \n D = water depth \n W = water width \n H = reference vessel height‡', 'Guys, messengers, communication, span & lightning protection wires; communication cables', ' ', ' ', ' ', ' ', 'Open Supply Conductors and Service Conductors, ac ' + str(voltage_range) + ' kV'],
+        ['Crossing Class', 'Type of waterways crossed: \n A = water areas \n D = water depth \n W = water width \n H = reference vessel height‡', 'Guys, messengers, communication, span & lightning protection wires; communication cables', 'Open Supply Conductors and Service Conductors, ac ' + str(voltage_range) + ' kV'],
         [' '],
-        [' ', 'Basic (m)', "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", "CSA Total (m)", "Design Clearance (m)"],
+        [' ', ' ', 'Basic (m)', "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", "CSA Total (m)", "Design Clearance (m)"],
               ]
     
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(7):
-        row = [CSA3_titles[i], CSA_Table3_data['Neutral Basic (m)'][i], CSA_Table3_data['Neutral Design Clearance (m)'][i], CSA_Table3_data['Basic (m)'][i], CSA_Table3_data['Altitude Adder (m)'][i], CSA_Table3_data['CSA Total (m)'][i], CSA_Table3_data['Design Clearance (m)'][i]]
+        row = [CSA3_Crossing_Class[i] ,CSA3_titles[i], CSA_Table3_data['Neutral Basic (m)'][i], CSA_Table3_data['Neutral Design Clearance (m)'][i], CSA_Table3_data['Basic (m)'][i], CSA_Table3_data['Altitude Adder (m)'][i], CSA_Table3_data['CSA Total (m)'][i], CSA_Table3_data['Design Clearance (m)'][i]]
         CSA3.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -833,7 +833,7 @@ def create_report_excel():
     # define cell format
     cell_format_CSA_3 = {
         #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
-        'range_merge': [(1, 1, 3, n_column_CSA_table_3, 'center'), (4, 2, 5, 6, 'center'), (4, 1, 6, 1, 'center'), (4, 7, 5, 12, 'center'), (6, 2, 6, 6, 'center'), (6, 7, 6, 12, 'center')],
+        'range_merge': [(1, 1, 3, n_column_CSA_table_3, 'center'), (4, 3, 4, 8, 'center'), (5, 1, 6, 1, 'center'), (5, 2, 6, 2, 'center'), (5, 3, 5, 4, 'center'), (5, 5, 5, 8, 'center')],
         'range_font_bold' : [(1, 1, 2, 1)],
         'range_color': list_range_color_CSA3,
         'range_border': [(1, 1, 1, n_column_CSA_table_3), (2, 1, n_row_CSA_table_3, n_column_CSA_table_3)],
@@ -883,8 +883,8 @@ def create_report_excel():
               ]
     
     #The following will fill out the rest of the table with numbers in their respective problems
-    for i in range(7):
-        row = [CSA5_titles[i], CSA_Table5_data['Neutral Basic (m)'][i], CSA_Table5_data['Neutral Design Clearance (m)'][i], CSA_Table5_data['Basic (m)'][i], CSA_Table5_data['Altitude Adder (m)'][i]]
+    for i in range(3):
+        row = [CSA5_titles[i], CSA_Table5_data['Basic (m)'][i], CSA_Table5_data['Design Clearance (m)'][i]]
         CSA5.append(row)
 
     #This is retrieving the number of rows in each table array
