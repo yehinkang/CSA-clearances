@@ -24,49 +24,61 @@ ref_table= pd.ExcelFile(ref_table_filepath)
 
 #Let's set up a universal input dictionary
 inputs = {
-    'p2p_voltage': 20,
-    'Max_Overvoltage': 20,
+    'p2p_voltage': 138,
+    'Max_Overvoltage': 0.05,
 
-    'Buffer_Neut':20,
-    'Buffer_Live':20,
+    'Buffer_Neut':1.2,
+    'Buffer_Live':1.2,
 
-    'Design_buffer_2_obstacles':0.2,
-    'Design_Buffer_Same_Structure':0.1,
+    'Design_buffer_2_obstacles':1.2,
+    'Design_Buffer_Same_Structure':0.6,
 
-    'Clearance_Rounding':0.1,
+    'Clearance_Rounding':0.01,
     
     #There will need to be a dropdown menu made on the webpage with matching locations made on the webpage
-    'Location': "Camrose",
+    'Location': "Alberta Camrose",
 
     #Add these as check boxes in the webpage
     'grounded': False,
     'sheathed': False,
 
     #Latitude_Northing
-        'Northing_deg':93,
+        'Northing_deg':53.02,
         'Northing_mins':0,
         'Northing_seconds':0,
 
     #Longitude Westing
-        'Westing_deg':54,
+        'Westing_deg':-112.83,
         'Westing_mins':0,
         'Westing_seconds':0,
 
     # Loc_Elevation (Calculated fromt he coordinates)
 
-    'Custom_Elevation':0,
+    'Custom_Elevation':1200,
 
     #Table 17 Horizontal Conductor Seperations
-        'Span_Length':0,
-        'Final_Unloaded_Sag_15C':0,
+        'Span_Length':150,
+        'Final_Unloaded_Sag_15C':1,
 
     #Crossing_or_Underbuild
-        'Is_main_wire_upper':0,
-        'lower wire':0,
-        'XING_P2P_Voltage':0,
-        'XING_Max_Overvoltage':0,
+        'Is_main_wire_upper':False,
+        'lower wire':True,
+        'XING_P2P_Voltage':79,
+        'XING_Max_Overvoltage':0.05,
 
 }
+
+#The following function takes the decimal points in the dictionary and turns that into an integer to use in np.round in all functions
+def decimal_points(num):
+    num_str = str(num)
+    if '.' in num_str:
+        return len(num_str.split('.')[1])
+    else:
+        return 0
+Clearance_Rounding = {key: inputs[key] for key in ['Clearance_Rounding']}
+Nums_after_decimal = Clearance_Rounding['Clearance_Rounding']
+Numpy_round_integer = decimal_points(Nums_after_decimal)
+
 
 #The following function will take an dictionary and export it into excel using pandas(useful for troubleshooting dictionary outputs)
 def save2xl(x):
@@ -112,8 +124,12 @@ def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, 
 
     #Finding the value in the same position in the other datasets
     Closest_place_name = Place_name.iloc[position]
-    Closest_elevation = Elevation.iloc[position]
 
+    Custom_Elevation = {key: inputs[key] for key in ['Custom_Elevation']}
+    if Custom_Elevation['Custom_Elevation'] == 0:
+        Closest_elevation = Elevation.iloc[position]
+    else:
+        Closest_elevation = Custom_Elevation['Custom_Elevation']
 
     #The snow data is a different length therefor the code is being mirrored for snowfall lookup
     Latitude_lookup_snow = Lookup_Snow['Latitude (deg)']
@@ -131,9 +147,10 @@ def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, 
     Max_snow_depth = Snow_Depth.iloc[position_snow]
     #The following will return the values as calculated by the function to the user.
     return Closest_place_name, Closest_elevation, Max_snow_depth
+
+#The following runs the location_lookup function with the dictionary inputs for use in code going forwards
 loc_lookup_input = {key: inputs[key] for key in ['Northing_deg', 'Northing_mins', 'Northing_seconds', 'Westing_deg', 'Westing_mins', 'Westing_seconds']}
-print(loc_lookup_input)
-#location_lookup(**loc_lookup_input)
+Place, Altitude, Snow_Depth = location_lookup(**loc_lookup_input)
 
 #The following function will take inputs and create output arrays that can be inserted into a table
 #This will take voltage in kilovolts and everthing else in meters
@@ -180,13 +197,11 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     6. Above top of rails at railway crossings, equipment not exceeding 7.2m 
     """
     Repave_Adder = np.array([0,0,0.225,0.225,0,0.3], dtype=float)
-
-    Place, Altitude, Snow_Depth = location_lookup(56,0,0,98,0,0)
-    Snow_Adder = Snow_Depth * np.array([0,1,1,1,1,0], dtype=float)
+    Snow_Adder = Snow_Depth * np.array([1,1,0,0,1,0], dtype=float)
 
     #Need to find altitude
     if Altitude > 1000:
-        Altitude_Adder = (Altitude - 1000)/100 * 0.01 * AEUC_clearance
+        Altitude_Adder = (Altitude - 1000) / 100 * 0.01 * AEUC_clearance
     else:
         Altitude_Adder = np.array([0,0,0,0,0,0], dtype=float)
 
@@ -200,6 +215,19 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 
     AEUC_total_clearance = AEUC_clearance + Repave_Adder + Snow_Adder + Altitude_Adder
     Design_clearance = AEUC_total_clearance + Buffer_live_array
+
+    #The following is to round all the values before they are sent to the table
+    AEUC_neut_clearance = np.round(AEUC_neut_clearance, Numpy_round_integer)
+    Repave_Adder = np.round(Repave_Adder, Numpy_round_integer)
+    Snow_Adder = np.round(Snow_Adder, Numpy_round_integer)
+    AEUC_total_clearance_neut = np.round(AEUC_total_clearance_neut, Numpy_round_integer)
+    Design_clearance_neut = np.round(Design_clearance_neut, Numpy_round_integer)
+    AEUC_clearance = np.round(AEUC_clearance, Numpy_round_integer)
+    Altitude_Adder = np.round(Altitude_Adder, Numpy_round_integer)
+    Repave_Adder = np.round(Repave_Adder, Numpy_round_integer)
+    Snow_Adder = np.round(Snow_Adder, Numpy_round_integer)
+    AEUC_total_clearance = np.round(AEUC_total_clearance, Numpy_round_integer)
+    Design_clearance = np.round(Design_clearance, Numpy_round_integer)
 
     #Creating a dictionary to turn into a dataframe
     data = {
@@ -232,65 +260,67 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     AEUC_7.set_index("Wire or Conductor", inplace = True)
     
     #Specify the row that is being used for this
-    AEUC_neut_clearance = AEUC_7.loc['Guys communications cables, and drop wires'].values
+    AEUC_neut_clearance_basic = AEUC_7.loc['Guys communications cables, and drop wires'].values
+    AEUC_neut_clearance = Design_buffer_2_obstacles * np.ones(len(AEUC_neut_clearance_basic))
 
     if 0 < voltage <= 0.75:
         if sheathed == True:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0 - 750 V Enclosed in effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
         if grounded == True:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0 - 750 V Insulated or grounded'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
         else:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0 - 750 V Neither insulated or grounded or enclosed in effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
     elif 0.75 < voltage <= 22:
         if sheathed == False:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0.75 - 22kV Not enclosed in  effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
         else:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0.75 - 22kV Enclosed in effectively grounded metallic sheath'].values
-            AEUC_total_clearance = AEUC_clearance
             AEUC_voltage_adder = 0
     else:
         #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['Over 22kV'].values
             AEUC_voltage_adder = (voltage - 22) * 0.01
 
+    #The following is to round all the values before they are sent to the table
+    AEUC_neut_clearance_basic = np.round(AEUC_neut_clearance_basic, Numpy_round_integer)
+    AEUC_clearance = np.round(AEUC_clearance, Numpy_round_integer)
+    AEUC_voltage_adder = np.round(AEUC_voltage_adder, Numpy_round_integer)
+    Design_buffer_2_obstacles = np.round(Design_buffer_2_obstacles, Numpy_round_integer)
+
     #Indexing certain elements in the array BA = basic, VA = Voltage Adder, AT = AEUC Total, DC = Design Clearance
-
-
-    H2building_BA = np.array([AEUC_neut_clearance[0], AEUC_clearance[0]])
+    H2building_BA = np.array([AEUC_neut_clearance_basic[0], AEUC_clearance[0]])
     H2building_VA = np.array([0, AEUC_voltage_adder])
-    H2building_AT = np.array([AEUC_neut_clearance[0], (AEUC_clearance[0] + AEUC_voltage_adder)])
+    H2building_AT = np.array([AEUC_neut_clearance_basic[0], (AEUC_clearance[0] + AEUC_voltage_adder)])
     H2building_DC = np.array([AEUC_neut_clearance[0], (AEUC_clearance[0] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
-    V2building_BA = np.array([AEUC_neut_clearance[1], AEUC_clearance[1]])
+    V2building_BA = np.array([AEUC_neut_clearance_basic[1], AEUC_clearance[1]])
     V2building_VA = H2building_VA
-    V2building_AT = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder)])
+    V2building_AT = np.array([AEUC_neut_clearance_basic[1], (AEUC_clearance[1] + AEUC_voltage_adder)])
     V2building_DC = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
 
-    H2object_BA = np.array([AEUC_neut_clearance[2], AEUC_clearance[2]])
+    H2object_BA = np.array([AEUC_neut_clearance_basic[2], AEUC_clearance[2]])
     H2object_VA = H2building_VA
-    H2object_AT = np.array([AEUC_neut_clearance[2], (AEUC_clearance[2] + AEUC_voltage_adder)])
+    H2object_AT = np.array([AEUC_neut_clearance_basic[2], (AEUC_clearance[2] + AEUC_voltage_adder)])
     H2object_DC = np.array([AEUC_neut_clearance[2], (AEUC_clearance[2] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
-    V2object_BA = np.array([AEUC_neut_clearance[3], AEUC_clearance[3]])
+    V2object_BA = np.array([AEUC_neut_clearance_basic[3], AEUC_clearance[3]])
     V2object_VA = H2building_VA
-    V2object_AT = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder)])
+    V2object_AT = np.array([AEUC_neut_clearance_basic[3], (AEUC_clearance[3] + AEUC_voltage_adder)])
     V2object_DC = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
     Categories = np.array(["Guys, communication cables, and drop wires", "Supply conductors"])
+    
+    
 
 
     #Creating a dictionary to turn into a dataframe
@@ -341,7 +371,7 @@ def create_report_excel():
 
 #AEUC Table 5
 #region
-    AEUC_neut_clearance, Repave_Adder, Snow_Adder, AEUC_total_clearance_neut, Design_clearance_neut, AEUC_clearance, Altitude_Adder, Repave_Adder, Snow_Adder, AEUC_total_clearance, Design_clearance  = AEUC_table5_clearance(138, 0.5, 0.5) 
+    AEUC_neut_clearance, Repave_Adder, Snow_Adder, AEUC_total_clearance_neut, Design_clearance_neut, AEUC_clearance, Altitude_Adder, Repave_Adder, Snow_Adder, AEUC_total_clearance, Design_clearance  = AEUC_table5_clearance(**AEUC5_input)
     AEUC5_cell00 = 'Over walkways or land normally accessible only to pedestrians, snowmobiles, and all terrain vehicles not exceeding 3.6m'
     AEUC5_cell10 = 'Over rights of way of underground pipelines operating at a pressure of over 700 kilopascals; equipment not exceeding 4.15m'
     AEUC5_cell20 = 'Over land likely to be travelled by road vehicles (including roadways, streets, lanes, alleys, driveways, and entrances); equipment not exceeding 4.15m'
@@ -366,7 +396,7 @@ def create_report_excel():
         [' ', 'Basic (m)', 'Re-pave Adder (m)', "Snow Adder (m)", "AEUC Total (m)", "Design Clearance (m)", 'Basic (m)', "Altitude Adder (m)", 'Re-pave Adder (m)', "Snow Adder (m)", "AEUC Total (m)", "Design Clearance (m)"],
               ]
     #The following will fill out the rest of the table with numbers in their respective problems
-    for i in range(5):
+    for i in range(6):
         row = [AEUC5_titles[i], AEUC_neut_clearance[i], Repave_Adder[i], Snow_Adder[i], AEUC_total_clearance_neut[i], Design_clearance_neut[i], AEUC_clearance[i], Altitude_Adder[i], Repave_Adder[i], Snow_Adder[i], AEUC_total_clearance[i], Design_clearance[i]]
         AEUC_5.append(row)
 
@@ -411,7 +441,7 @@ def create_report_excel():
 
 #AEUC Table 7
 #region
-    H2building_BA, H2building_VA, H2building_AT, H2building_DC, V2building_BA, V2building_VA, V2building_AT, V2building_DC, H2object_BA, H2object_VA, H2object_AT, H2object_DC, V2object_BA, V2object_VA, V2object_AT, V2object_DC = AEUC_table7_clearance(138, True, True, 0.5)
+    H2building_BA, H2building_VA, H2building_AT, H2building_DC, V2building_BA, V2building_VA, V2building_AT, V2building_DC, H2object_BA, H2object_VA, H2object_AT, H2object_DC, V2object_BA, V2object_VA, V2object_AT, V2object_DC = AEUC_table7_clearance(**AEUC7_input)
     AEUC7_cell00 = 'Guys, communication cables, and drop wires'
     AEUC7_cell10 = 'Supply conductors'
     voltage = 138
