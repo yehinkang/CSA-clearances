@@ -256,7 +256,7 @@ AEUC_Table5_data  = AEUC_table5_clearance(**AEUC5_input)
 def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obstacles):
 
     voltage = p2p_voltage / np.sqrt(3)
-    #Start by opening the sheet for AEUC Table 5 within the reference table file
+    #Start by opening the sheet for AEUC Table 7 within the reference table file
     AEUC_7 = pd.read_excel(ref_table, "AEUC Table 7")
 
     #This will look a bit different since we'll be finding data based on rows vs. columns.
@@ -729,6 +729,109 @@ def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     return data
 CSA9_input = {key: inputs[key] for key in ['p2p_voltage',"Buffer_Neut", "Buffer_Live"]}
 CSA_Table9_data = CSA_Table_9_clearance(**CSA9_input)
+
+#The following function is for CSA Table 10
+def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles):
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA table 10 within the reference table file
+    CSA_10 = pd.read_excel(ref_table, "CSA table 10")
+
+    #This will look a bit different since we'll be finding data based on rows vs. columns.
+    #Since .loc is being used to find the row a column must be chosen to use 
+    CSA_10.set_index("Wire or Conductor", inplace = True)
+    
+    #Specify the row that is being used for this
+    AEUC_neut_clearance_basic = CSA_10.loc['Guys communications cables, and drop wires'].values
+    AEUC_neut_clearance = Design_buffer_2_obstacles * np.ones(len(AEUC_neut_clearance_basic))
+
+    #Figuring out the clearance to use with the conductor voltage
+    if 0 < voltage <= 0.75:
+        if sheathed == True:
+            #Specify the row that is being used for this
+            AEUC_clearance = CSA_10.loc['0 - 750 V Enclosed in effectively grounded metallic sheath'].values
+            AEUC_voltage_adder = 0
+        if grounded == True:
+            #Specify the row that is being used for this
+            AEUC_clearance = CSA_10.loc['0 - 750 V Insulated or grounded'].values
+            AEUC_voltage_adder = 0
+        else:
+            #Specify the row that is being used for this
+            AEUC_clearance = CSA_10.loc['0 - 750 V Neither insulated or grounded or enclosed in effectively grounded metallic sheath'].values
+            AEUC_voltage_adder = 0
+    elif 0.75 < voltage <= 22:
+        if sheathed == False:
+            #Specify the row that is being used for this
+            AEUC_clearance = CSA_10.loc['0.75 - 22kV Not enclosed in  effectively grounded metallic sheath'].values
+            AEUC_voltage_adder = 0
+        else:
+            #Specify the row that is being used for this
+            AEUC_clearance = CSA_10.loc['0.75 - 22kV Enclosed in effectively grounded metallic sheath'].values
+            AEUC_voltage_adder = 0
+    else:
+        #Specify the row that is being used for this
+            AEUC_clearance = CSA_10.loc['Over 22kV'].values
+            AEUC_voltage_adder = (voltage - 22) * 0.01
+
+    #The following is to round all the values before they are sent to the table
+    AEUC_neut_clearance_basic = np.round(AEUC_neut_clearance_basic, Numpy_round_integer)
+    AEUC_clearance = np.round(AEUC_clearance, Numpy_round_integer)
+    AEUC_voltage_adder = np.round(AEUC_voltage_adder, Numpy_round_integer)
+    Design_buffer_2_obstacles = np.round(Design_buffer_2_obstacles, Numpy_round_integer)
+
+    #Turning the rows into columns for easier display
+    #Indexing certain elements in the array BA = basic, VA = Voltage Adder, AT = AEUC Total, DC = Design Clearance
+    H2building_BA = np.array([AEUC_neut_clearance_basic[0], AEUC_clearance[0]])
+    H2building_VA = np.array([0, AEUC_voltage_adder])
+    H2building_AT = np.array([AEUC_neut_clearance_basic[0], (AEUC_clearance[0] + AEUC_voltage_adder)])
+    H2building_DC = np.array([AEUC_neut_clearance[0], (AEUC_clearance[0] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+
+    V2building_BA = np.array([AEUC_neut_clearance_basic[1], AEUC_clearance[1]])
+    V2building_VA = H2building_VA
+    V2building_AT = np.array([AEUC_neut_clearance_basic[1], (AEUC_clearance[1] + AEUC_voltage_adder)])
+    V2building_DC = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+
+    H2object_BA = np.array([AEUC_neut_clearance_basic[2], AEUC_clearance[2]])
+    H2object_VA = H2building_VA
+    H2object_AT = np.array([AEUC_neut_clearance_basic[2], (AEUC_clearance[2] + AEUC_voltage_adder)])
+    H2object_DC = np.array([AEUC_neut_clearance[2], (AEUC_clearance[2] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+
+    V2object_BA = np.array([AEUC_neut_clearance_basic[3], AEUC_clearance[3]])
+    V2object_VA = H2building_VA
+    V2object_AT = np.array([AEUC_neut_clearance_basic[3], (AEUC_clearance[3] + AEUC_voltage_adder)])
+    V2object_DC = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+
+    Categories = np.array(["Guys, communication cables, and drop wires", "Supply conductors"])
+
+    #Creating a dictionary to turn into a dataframe
+    data = {
+        'Wire or Conductor': Categories,
+        'Building Horizontal to Surface Basic': H2building_BA,
+        'Building Horizontal to Surface Voltage Adder': H2building_VA,
+        'Building Horizontal to Surface AEUC Total': H2building_AT,
+        'Building Horizontal to Surface Design Clearance': H2building_DC,
+
+        'Building Vertical to Surface Basic': V2building_BA,
+        'Building Vertical to Surface Voltage Adder': V2building_VA,
+        'Building Vertical to Surface AEUC Total': V2building_AT,
+        'Building Vertical to Surface Clearance': V2building_DC,
+
+        'Obstacle Horizontal to Surface Basic': H2object_BA,
+        'Obstacle Horizontal to Surface Voltage Adder': H2object_VA,
+        'Obstacle Horizontal to Surface AEUC Total': H2object_AT,
+        'Obstacle Horizontal to Surface Clearance': H2object_DC,
+
+        'Obstacle Vertical to Surface Basic': V2object_BA,
+        'Obstacle Vertical to Surface Voltage Adder': V2object_VA,
+        'Obstacle Vertical to Surface AEUC Total': V2object_AT,
+        'Obstacle Vertical to Surface Clearance': V2object_DC,
+        }
+    
+    #The following is a pandas dataframe and it is using the function from above to export the dataframe into an excel file
+    #save2xl(data)
+    return data
+CSA10_input = {key: inputs[key] for key in ['p2p_voltage', "grounded", "sheathed", 'Design_buffer_2_obstacles']}
+CSA_Table10_data = CSA_table10_clearance(**CSA10_input)
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
