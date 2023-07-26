@@ -581,23 +581,24 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     CSA_6_neut_clearance = CSA_6.loc['Guys; messengers; communication, span, and lightning protection wires; communication cables']
     CSA_6_sub750_clearance = CSA_6.loc['Open supply-line conductors and service conductors of 0—750 V and effectively grounded continuous metallic sheathed cables of all voltages']
 
-    if  0 < voltage <= 0.75: 
+    if  voltage <= 22: 
         CSA_6_clearance = CSA_6.loc ['AC > 0.75 < 22 kV']
         Voltage_range = '> 0.75 ≤ 22 kV'
-    elif voltage <=22: 
+    elif voltage <=50: 
         CSA_6_clearance = CSA_6.loc ['AC > 22 < 50 kV']
         Voltage_range = '> 22 ≤ 50 kV'
-    elif voltage <=50: 
+    elif voltage <=90: 
         CSA_6_clearance = CSA_6.loc ['AC > 50 < 90 kV']
         Voltage_range = '> 50 ≤ 90 kV'
-    elif voltage <=50: 
+    elif voltage <=120: 
         CSA_6_clearance = CSA_6.loc ['AC > 90 < 120 kV']
         Voltage_range = '> 90 ≤ 120 kV'
-    elif voltage <=50: 
+    elif voltage <=150: 
         CSA_6_clearance = CSA_6.loc ['AC > 120 < 150 kV']
         Voltage_range = '> 120 ≤ 150 kV'
     else: 
         CSA_6_clearance = CSA_6.loc ['AC Supply conductors > 150 kV +0.01m/kV over 150kV']
+        CSA_6_clearance = ((voltage - 150) *0.01) + CSA_6_clearance
         Voltage_range = '> 150 kV'
 
     #DC = Design Clearance
