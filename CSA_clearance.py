@@ -17,7 +17,7 @@ I'm unfamiliar with flask and as such there is nothing in the way of web integra
 """
 
 #This is where the reference file is located
-ref_table_filepath = r"C:\Users\yekang\OneDrive - POWER Engineers, Inc\Desktop\Python Stuff\Clearance Calcs\AEUC_CSA_clearances.xlsx"
+ref_table_filepath = r"C:\Users\yekang\OneDrive - POWER Engineers, Inc\Desktop\Python Stuff\Clearance Calcs\CSA-clearances\AEUC_CSA_clearances.xlsx"
 
 #Indicated the location of the excel file and loads it into python, this ensures the file is only read once
 ref_table= pd.ExcelFile(ref_table_filepath)
@@ -258,6 +258,8 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     voltage = p2p_voltage / np.sqrt(3)
     #Start by opening the sheet for AEUC Table 5 within the reference table file
     AEUC_7 = pd.read_excel(ref_table, "AEUC Table 7")
+
+    #This will look a bit different since we'll be finding data based on rows vs. columns.
     #Since .loc is being used to find the row a column must be chosen to use 
     AEUC_7.set_index("Wire or Conductor", inplace = True)
     
@@ -299,6 +301,7 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     AEUC_voltage_adder = np.round(AEUC_voltage_adder, Numpy_round_integer)
     Design_buffer_2_obstacles = np.round(Design_buffer_2_obstacles, Numpy_round_integer)
 
+    #Turning the rows into columns for easier display
     #Indexing certain elements in the array BA = basic, VA = Voltage Adder, AT = AEUC Total, DC = Design Clearance
     H2building_BA = np.array([AEUC_neut_clearance_basic[0], AEUC_clearance[0]])
     H2building_VA = np.array([0, AEUC_voltage_adder])
@@ -309,7 +312,6 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     V2building_VA = H2building_VA
     V2building_AT = np.array([AEUC_neut_clearance_basic[1], (AEUC_clearance[1] + AEUC_voltage_adder)])
     V2building_DC = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
-
 
     H2object_BA = np.array([AEUC_neut_clearance_basic[2], AEUC_clearance[2]])
     H2object_VA = H2building_VA
@@ -360,7 +362,7 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     #Start by opening the sheet for CSA Table 2 within the reference table file
     CSA_2 = pd.read_excel(ref_table, "CSA table 2")
 
-    #Specify the row that is being used for this
+    #Specify the column that is being used for this
     CSA_2_neut_clearance = CSA_2['Guys, messengers, communication, span & lightning protection wires; communication cables']
 
     if  0 < voltage <= 0.75: 
@@ -425,12 +427,14 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     else:
         Altitude_Adder = np.array([0,0,0,0,0,0], dtype=float)
 
+    #Getting the clearance arrays
     Neutral_CSA_Total = Snow_Adder + Repave_Adder + CSA_2_neut_clearance
     CSA_Total = Snow_Adder + Repave_Adder + Altitude_Adder + CSA_2_clearance
 
     Neutral_DC = Buffer_Neut + Neutral_CSA_Total
     CSA_DC = Buffer_Live + CSA_Total
 
+    #Rounding all the values in the arrays
     CSA_2_neut_clearance = np.round(CSA_2_neut_clearance, Numpy_round_integer)
     Repave_Adder = np.round(Repave_Adder, Numpy_round_integer)
     Snow_Adder = np.round(Snow_Adder, Numpy_round_integer)
@@ -441,6 +445,7 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     CSA_Total = np.round(CSA_Total, Numpy_round_integer)
     CSA_DC = np.round(CSA_DC, Numpy_round_integer)
 
+    #Creating a dictionary that will hold all the values that are outputted
     data = {
         'Neutral Basic (m)': CSA_2_neut_clearance,
         'Re-pave Adder (m)': Repave_Adder,
@@ -470,7 +475,7 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_3 = pd.read_excel(ref_table, "CSA table 3")
 
-    #Neutral clearance row being found on spreadsheet
+    #Neutral clearance column being found on spreadsheet
     CSA_3_neut_clearance = CSA_3['Guys; messengers; communication, span, and lightning protection wires; communication cables']
 
     #SFinding the correct clearance value based on conductor voltage
@@ -575,6 +580,8 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     voltage = p2p_voltage / np.sqrt(3)
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_6 = pd.read_excel(ref_table, "CSA table 6")
+    
+    #Again this will look a bit different since rows are being used instead of columns
     #Since .loc is being used to find the row a column must be chosen to use 
     CSA_6.set_index("Wire closest to tracks", inplace = True)
 
@@ -606,6 +613,7 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     DC_sub750 = CSA_6_sub750_clearance + Buffer_Live
     DC = CSA_6_clearance + Buffer_Live
 
+    #Rounding all the values
     CSA_6_clearance = np.round(CSA_6_clearance, Numpy_round_integer)
     CSA_6_neut_clearance = np.round(CSA_6_neut_clearance, Numpy_round_integer)
     CSA_6_sub750_clearance = np.round(CSA_6_sub750_clearance, Numpy_round_integer)
@@ -613,11 +621,13 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     DC_neut = np.round(DC_neut, Numpy_round_integer)
     DC_sub750 = np.round(DC_sub750, Numpy_round_integer)
 
+    #Turning the rows into columns for easier display
     Basic_Main_Track = np.array([CSA_6_neut_clearance[0], CSA_6_sub750_clearance[0], CSA_6_clearance[0]])
     DC_Main_Track = np.array([DC_neut[0], DC_sub750[0], DC[0]])
     Basic_Siding = np.array([CSA_6_neut_clearance[1], CSA_6_sub750_clearance[1], CSA_6_clearance[1]])
     DC_Siding = np.array([DC_neut[1], DC_sub750[1], DC[1]])
 
+    #Creating a dictionary to hold outputs
     data = {
         'Main Basic (m)': Basic_Main_Track,
         'Main Design Clearance (m)': DC_Main_Track,
@@ -637,6 +647,7 @@ def CSA_Table_7_clearance(Buffer_Live):
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_7 = pd.read_excel(ref_table, "CSA table 7")
 
+    #finding a column for the basic clearance
     CSA_7clearance = CSA_7['Minimum horizontal separation, m']
 
     #Creating an array to add a design buffer to the basic clearance
@@ -654,6 +665,70 @@ def CSA_Table_7_clearance(Buffer_Live):
     return data
 CSA7_input = {key: inputs[key] for key in ["Buffer_Live"]}
 CSA_Table7_data = CSA_Table_7_clearance(**CSA7_input)
+
+#The following function is for CSA Table 9
+def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
+    voltage = p2p_voltage / np.sqrt(3)
+    #Start by opening the sheet for CSA Table 9 within the reference table file
+    CSA_9 = pd.read_excel(ref_table, "CSA table 9")
+
+    #Basic clearance columns being found on spreadsheet
+    CSA_9_build_hor = CSA_9['Buildings Horiz.']
+    CSA_9_build__vert = CSA_9['Buildings Vertical']
+    CSA_9_obs_hor = CSA_9['To signs, billboards, lamp and traffic sign standards, and similar plant Horiz.']
+    CSA_9_obs_vert = CSA_9['To signs, billboards, lamp and traffic sign standards, and similar plant Vertical']
+
+    #Determining the voltage for >22kV
+    if voltage > 22:
+        #Getting the voltage adder value
+        voltage_adder = (voltage - 22) * 0.01
+
+        #Need to put this into an array so that it only adds onto the >22kV scenario
+        voltage_adder_array = np.array([0,0,0,0,0,0,voltage_adder])
+
+        #Adding the voltage adder onto the basic clearances if voltage is high enough
+        CSA_9_build_hor = CSA_9_build_hor + voltage_adder_array
+        CSA_9_build__vert = CSA_9_build__vert + voltage_adder_array
+        CSA_9_obs_hor = CSA_9_obs_hor + voltage_adder_array
+        CSA_9_obs_vert = CSA_9_obs_vert + voltage_adder_array
+    else:
+        voltage_adder = 0
+
+    #Creating an adder array, first row is for neutral, and the next 5 rows are for conductors with voltage, last row considers a voltage adder as well
+    adder_array = np.array([Buffer_Neut, Buffer_Live, Buffer_Live, Buffer_Live, Buffer_Live, Buffer_Live, Buffer_Live])
+
+    #Adding the adder to get design clearance values
+    DC_build_hor = CSA_9_build_hor + adder_array
+    DC_build__vert = CSA_9_build__vert + adder_array
+    DC_obs_hor = CSA_9_obs_hor + adder_array
+    DC_obs_vert = CSA_9_obs_vert + adder_array
+
+    #Rounding the values
+    CSA_9_build_hor = np.round(CSA_9_build_hor, Numpy_round_integer)
+    CSA_9_build__vert = np.round(CSA_9_build__vert, Numpy_round_integer)
+    CSA_9_obs_hor = np.round(CSA_9_obs_hor, Numpy_round_integer)
+    CSA_9_obs_vert = np.round(CSA_9_obs_vert, Numpy_round_integer)
+
+    DC_build_hor = np.round(DC_build_hor, Numpy_round_integer)
+    DC_build__vert = np.round(DC_build__vert, Numpy_round_integer)
+    DC_obs_hor = np.round(DC_obs_hor, Numpy_round_integer)
+    DC_obs_vert = np.round(DC_obs_vert, Numpy_round_integer)
+
+    #Creating a dictionary that will have the exports from the table
+    data = {
+        'Buildings basic horizontal': CSA_9_build_hor,
+        'Buildings basic vertical': CSA_9_build__vert,
+        'Obstacles basic horizontal': CSA_9_obs_hor,
+        'Obstacles basic vertical': CSA_9_obs_vert,
+
+        'Buildings Design Clearance Horizontal': DC_build_hor,
+        'Buildings Design Clearance vertical': DC_build__vert,
+        'Obstacles Design Clearance Horizontal': DC_obs_hor,
+        'Obstacles Design Clearance vertical': DC_obs_vert,
+        }
+    return data
+CSA9_input = {key: inputs[key] for key in ['p2p_voltage',"Buffer_Neut", "Buffer_Live"]}
+CSA_Table9_data = CSA_Table_9_clearance(**CSA9_input)
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -1173,9 +1248,97 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 9
+#region
+    #Creating the title blocks. etc
+    CSA9_cell00 = 'Guys, communication cables, and drop wires'
+    CSA9_cell10 = '0-750 V'
+    CSA9_cell20 = ' '
+    CSA9_cell30 = ' '
+    CSA9_cell40 = '> 0.75kV <=22 kV'
+    CSA9_cell50 = ' '
+    CSA9_cell60 = '> 22 kV**††'
+
+    CSA9_cell01 = ' '
+    CSA9_cell11 = 'Insulated or grounded'
+    CSA9_cell21 = 'Enclosed in effectively grounded metallic sheath'
+    CSA9_cell31 = 'Not insulated, grounded, or enclosed in effectively grounded metallic sheath'
+    CSA9_cell41 = 'Enclosed in effectively grounded metallic sheath'
+    CSA9_cell51 = 'Not enclosed in effectively grounded metallic sheath'
+    CSA9_cell61 = '-'
+
+    voltage = inputs['p2p_voltage']
+    elevation = Altitude
+
+    CSA9_titles = np.array([CSA9_cell00, CSA9_cell10, CSA9_cell20, CSA9_cell30, CSA9_cell40, CSA9_cell50, CSA9_cell60])
+    CSA9_loc_titles = np.array([CSA9_cell01, CSA9_cell11, CSA9_cell21, CSA9_cell31, CSA9_cell41, CSA9_cell51, CSA9_cell61])
+    
+    CSA9 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 9 \n Minimum Design Clearances from Wires and Conductors not attached to Buildings, Signs, and similar Plant, ac \n (See clauses 5.7.3.1 to 5.7.3.3.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        [' ', ' ', 'Minimum clearance, m'],
+        [' ', ' ', 'To Buildings*† and above ground pipelines', ' ', ' ', ' ', 'To signs, billboards, lamp and traffic sign standards, and similar plant', ' ', ' ', ' '],
+        [' ', ' ', 'Basic', 'Design Clearance', 'Basic', 'Design Clearance', 'Basic', 'Design Clearance', 'Basic', 'Design Clearance'],
+        [' ', ' ', 'Horizontal to surface', ' ', 'Vertical to surface', ' ', 'Horizontal to surface', ' ', 'Vertical to surface', ' '],
+              ]
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(7):
+        row = [CSA9_titles[i], CSA9_loc_titles[i], CSA_Table9_data['Buildings basic horizontal'][i], CSA_Table9_data['Buildings Design Clearance Horizontal'][i], CSA_Table9_data['Buildings basic vertical'][i], CSA_Table9_data['Buildings Design Clearance vertical'][i] \
+               , CSA_Table9_data['Obstacles basic horizontal'][i], CSA_Table9_data['Obstacles Design Clearance Horizontal'][i], CSA_Table9_data['Obstacles basic vertical'][i], CSA_Table9_data['Obstacles Design Clearance vertical'][i]]
+        CSA9.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_9 = len(CSA9)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_9 = len(CSA9[7])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA9 = []
+    for i in range(n_row_CSA_table_9):
+        if i < 3:
+            list_range_color_CSA9.append((i + 1, 1, i + 1, n_column_CSA_table_9, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA9.append((i + 1, 1, i + 1, n_column_CSA_table_9, color_bkg_data_1))
+        else:
+            list_range_color_CSA9.append((i + 1, 1, i + 1, n_column_CSA_table_9, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_9 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_9, 'center'),(4, 1, 7, 2, 'center'), (4, 3, 4, 10, 'center'), (5, 3, 5, 6, 'center'), (5, 7, 5, 10, 'center'), (7, 3, 7, 4, 'center'), (7, 5, 7, 6, 'center'), (7, 7, 7, 8, 'center'), (7, 9, 7, 10, 'center'),\
+                        (8, 1, 8, 2, 'center'),(9, 1, 11, 1, 'center'),(12, 1, 13, 1, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA9,
+        'range_border': [(1, 1, 1, n_column_CSA_table_9), (2, 1, n_row_CSA_table_9, n_column_CSA_table_9)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_9)],
+    }
+
+    # define some footer notes
+    footer_CSA9 = ['* Clearances over or adjacent to portions of a building normally traversed by persons or vehicles are specified in Tables 2 and 4.',
+                   '† Clearances are applicable to non-metallic buildings or buildings whose metallic parts are effectively grounded. For other buildings, an assessment might be needed to determine additional clearances for electrostatic induction (see Clause 5.7.3.3).', 
+                   '0-750V 1.Insulated or grounded  2.Not insulated, grounded, or enclosed in effectively grounded metallic sheath, Vertical to Surface may be reduced to 1 m for portions of the building considered normally inaccessible.',
+                   '** and 0.75 - 22kV,Not enclosed in effectively grounded metallic sheath, Vertical to Surface. Conductors of these voltage classes should not be carried over buildings where other suitable construction can be used.',
+                   '†† Where it is necessary to carry conductors of these voltage classes over buildings, it should be determined whether additional measures, including increased clearances, are needed to ensure that the crossed-over buildings can be used safely and effectively.',
+                   '0.75 - 22kV, Not enclosed in effectively grounded metallic sheath, Horizontal to surface value may be reduced to 1.5 m where the building does not have fire escapes, balconies, and windows that can be opened adjacent to the conductor.',
+                   'Voltages are rms line-to-ground'
+                   ]
+
+    # define the worksheet
+    CSA_Table_9 = {
+        'ws_name': 'CSA Table 9',
+        'ws_content': CSA9,
+        'cell_range_style': cell_format_CSA_9,
+        'footer': footer_CSA9
+    }
+#endregion
 
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7]
+    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9]
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
