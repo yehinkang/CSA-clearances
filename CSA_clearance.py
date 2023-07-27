@@ -649,15 +649,15 @@ def CSA_Table_7_clearance(Buffer_Live):
 
     #Creating an array to add a design buffer to the basic clearance
     Buffer_Live_array = np.ones(len(CSA_7)) * Buffer_Live
-    CSA6_DC = CSA_7clearance + Buffer_Live_array
+    CSA7_DC = CSA_7clearance + Buffer_Live_array
 
     #Rounding
     CSA_7clearance = np.round(CSA_7clearance, Numpy_round_integer)
-    CSA6_DC = np.round(CSA6_DC, Numpy_round_integer)
+    CSA7_DC = np.round(CSA7_DC, Numpy_round_integer)
 
     data = {
         'Basic (m)': CSA_7clearance,
-        'Design Clearance (m)': CSA6_DC,
+        'Design Clearance (m)': CSA7_DC,
         }
     return data
 CSA7_input = {key: inputs[key] for key in ["Buffer_Live"]}
@@ -793,6 +793,81 @@ def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles):
     return data
 CSA10_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
 CSA_Table10_data = CSA_table10_clearance(**CSA10_input)
+
+#The following function is for CSA Table 11
+def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_11 = pd.read_excel(ref_table, "CSA table 11")
+
+    #This will look a bit different since we'll be finding data based on rows vs. columns.
+    #Since .loc is being used to find the row a column must be chosen to use 
+    CSA_11.set_index("Equipment or Conductors", inplace = True)
+
+    #Supply Equipment values
+    CSA11_SupplyEquipment = CSA_11.loc['Supply equipment'][0]
+    CSA11_SupplyEquipment_DC = CSA11_SupplyEquipment + Buffer_Live
+    CSA11_SupplyEquipmentB = CSA_11.loc['Supply equipment'][1]
+
+    #Neutral
+    CSA11_neut_clearance = CSA_11.loc['Guys, messengers, span wires, communication circuits, secondary cable 0–750 V, and multi-grounded neutral conductors'][0]
+    CSA11_neut_clearance_DC = CSA11_neut_clearance + Buffer_Neut
+    CSA11_neut_clearanceB = CSA_11.loc['Guys, messengers, span wires, communication circuits, secondary cable 0–750 V, and multi-grounded neutral conductors'][1]
+
+    if  0 < voltage <= 0.75: 
+        CSA11_clearance = CSA_11.loc['Guys, messengers, span wires, communication circuits, secondary cable 0–750 V, and multi-grounded neutral conductors'][0]
+        CSA11_clearanceB = CSA_11.loc['Guys, messengers, span wires, communication circuits, secondary cable 0–750 V, and multi-grounded neutral conductors'][1]
+        Voltage_range = '0–750V'
+    elif voltage <=22: 
+        CSA11_clearance = CSA_11.loc['Other supply conductors ≤ 22kV'][0]
+        CSA11_clearanceB = CSA_11.loc['Other supply conductors ≤ 22kV'][1]
+        Voltage_range = '> 0.75 ≤ 22'
+    elif voltage <=150: 
+        CSA11_clearance = CSA_11.loc['Supply conductors > 22 kV and ≤ 150 kV (6.7 + 0.01 m/kV above 22kV)'][0]
+        #Adding voltage adder
+        CSA11_clearance = (voltage-22)*0.01 + CSA11_clearance
+        CSA11_clearanceB = CSA_11.loc['Supply conductors > 22 kV and ≤ 150 kV (6.7 + 0.01 m/kV above 22kV)'][1]
+        Voltage_range = '> 22 ≤ 150'
+    else: 
+        CSA11_clearance = CSA_11.loc['Supply conductors > 150 kV'][0]
+        #Adding voltage adder
+        CSA11_clearance = (voltage-150)*0.01 + CSA11_clearance
+        CSA11_clearanceB = CSA_11.loc['Supply conductors > 150 kV'][1]
+        Voltage_range = '> 150'
+
+    #Creating an array to add a design buffer to the basic clearance
+    CSA11_DC = CSA11_clearance + Buffer_Live
+
+    #Rounding
+    CSA11_SupplyEquipment = np.round(CSA11_SupplyEquipment, Numpy_round_integer)
+    CSA11_SupplyEquipment_DC = np.round(CSA11_SupplyEquipment_DC, Numpy_round_integer)
+
+    CSA11_neut_clearance = np.round(CSA11_neut_clearance, Numpy_round_integer)
+    CSA11_neut_clearance_DC = np.round(CSA11_neut_clearance_DC, Numpy_round_integer)
+
+    CSA11_clearance = np.round(CSA11_clearance, Numpy_round_integer)
+    CSA11_DC = np.round(CSA11_DC, Numpy_round_integer)
+
+    #Creating the 3 columns that are needed to be outputted to form the dictionary output
+    CSA11_A = np.array([CSA11_SupplyEquipment, CSA11_neut_clearance, CSA11_clearance])
+    CSA11_A_DC = np.array([CSA11_SupplyEquipment_DC, CSA11_neut_clearance_DC, CSA11_DC])
+    CSA11_B = np.array([CSA11_SupplyEquipmentB, CSA11_neut_clearanceB, CSA11_clearanceB])
+
+
+    data = {
+        'Basic': CSA11_A,
+        'Design Clearance': CSA11_A_DC,
+        'B-Measured Vertically Over Land': CSA11_B,
+
+        'Voltage range': Voltage_range,
+        }
+    return data
+CSA11_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
+CSA_Table11_data = CSA_Table_11_clearance(**CSA11_input)
+
+
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -1470,8 +1545,79 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 11
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    voltage_range = CSA_Table11_data['Voltage range']
+
+    #Creating the title blocks. etc
+    CSA11_cell00 = 'Supply equipment'
+    CSA11_cell10 = 'Guys, messengers, span wires, communication circuits, secondary cable 0–750 V, and multi-grounded neutral conductors'
+    CSA11_cell20 = 'Supply conductors' + str(voltage_range) + ' kV*'
+
+    CSA11_titles = np.array([CSA11_cell00, CSA11_cell10, CSA11_cell20])
+    
+    CSA11 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 11 \n Minimum Separation of Equipment and Clearances of Conductors from Swimming Pools, ac \n (See clauses 5.7.5 and A.5.7.5 and Figure 1.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Wire closest to tracks', ' ', 'Minimum clearance, m'],
+        [' ', ' ', 'A — Measured in any direction from the water level, edge of pool, or diving platform', ' ', 'B — Measured vertically over land'],
+        [' ', ' ', 'Basic', 'Design Clearance'],
+              ]
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(3):
+        row = [CSA11_titles[i], ' ',  CSA_Table11_data['Basic'][i], CSA_Table11_data['Design Clearance'][i], CSA_Table11_data['B-Measured Vertically Over Land'][i]]
+        CSA11.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_11 = len(CSA11)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_11 = len(CSA11[6])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA11 = []
+    for i in range(n_row_CSA_table_11):
+        if i < 3:
+            list_range_color_CSA11.append((i + 1, 1, i + 1, n_column_CSA_table_11, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA11.append((i + 1, 1, i + 1, n_column_CSA_table_11, color_bkg_data_1))
+        else:
+            list_range_color_CSA11.append((i + 1, 1, i + 1, n_column_CSA_table_11, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_11 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_11, 'center'), (4, 1, 6, 2, 'center'), (4, 3, 4, 5, 'center'), (7, 1, 7, 2, 'center'), (8, 1, 8, 2, 'center'), (5, 3, 5, 4, 'center'), (5, 5, 6, 5, 'center'), (9, 1, 9, 2, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA11,
+        'range_border': [(1, 1, 1, n_column_CSA_table_11), (2, 1, n_row_CSA_table_11, n_column_CSA_table_11)],
+        'row_height': [(1, 50),(5, 100)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_11)],
+    }
+
+    # define some footer notes
+    footer_CSA11 = ['Voltages are rms line-to-ground.',
+                   'See Figure 1 for an illustration of swimming pool clearance limits.', 
+                   '*Supply conductors freater than 150 kV shall not cross over swimming pools or be closer to the edge of a pool than 8.0m + 0.01m/kV above 150 kV',
+                   ]
+
+    # define the worksheet
+    CSA_Table_11 = {
+        'ws_name': 'CSA Table 11',
+        'ws_content': CSA11,
+        'cell_range_style': cell_format_CSA_11,
+        'footer': footer_CSA11
+    }
+#endregion
+
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10]
+    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11]
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
