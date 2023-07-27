@@ -867,7 +867,93 @@ def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 CSA11_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
 CSA_Table11_data = CSA_Table_11_clearance(**CSA11_input)
 
+#The following function is for CSA Table 13
+def CSA_Table_13_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, XING_P2P_Voltage):
 
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+    XING_voltage = XING_P2P_Voltage / np.sqrt(3)
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_13 = pd.read_excel(ref_table, "CSA table 13")
+
+    #This will look a bit different since we'll be finding data based on rows vs. columns.
+    #Since .loc is being used to find the row a column must be chosen to use 
+    CSA_13.set_index("Equipment or Conductors", inplace = True)
+
+    if  0 < voltage <= 0.75: 
+        voltage_range_over = 'AC 0-0.75'
+    elif voltage <=22: 
+        voltage_range_over = 'AC < 0.75 ≤ 22'
+    elif voltage <=50: 
+        voltage_range_over = 'AC < 22 ≤ 50'
+    elif voltage <=90: 
+        voltage_range_over = 'AC < 50 ≤ 90'
+    elif voltage <=120: 
+        voltage_range_over = 'AC < 90 ≤ 120'
+    elif voltage <=150: 
+        voltage_range_over = 'AC < 120 ≤ 150'
+    elif voltage <=190: 
+        voltage_range_over = 'AC < 150 ≤ 190'
+    elif voltage <=220: 
+        voltage_range_over = 'AC < 190 ≤ 220'
+    elif voltage <=320: 
+        voltage_range_over = 'AC < 320 ≤ 425'
+    else: 
+        voltage_range_over = 'AC 0-0.75'
+    
+    if  0 < XING_voltage <= 0.75: 
+        voltage_range_XING = 'AC 0-0.75'
+    elif XING_voltage <=22: 
+        voltage_range_XING = 'AC < 0.75 ≤ 22'
+    elif XING_voltage <=50: 
+        voltage_range_XING = 'AC < 22 ≤ 50'
+    elif XING_voltage <=90: 
+        voltage_range_XING = 'AC < 50 ≤ 90'
+    elif XING_voltage <=120: 
+        voltage_range_XING = 'AC < 90 ≤ 120'
+    elif XING_voltage <=150: 
+        voltage_range_XING = 'AC < 120 ≤ 150'
+    elif XING_voltage <=190: 
+        voltage_range_XING = 'AC < 150 ≤ 190'
+    elif XING_voltage <=220: 
+        voltage_range_XING = 'AC < 190 ≤ 220'
+    elif XING_voltage <=320: 
+        voltage_range_XING = 'AC < 320 ≤ 425'
+    else: 
+        voltage_range_XING = 'AC 0-0.75'
+
+
+    #Supply Equipment values
+    CSA13_ac_clearance = CSA_13.at[ voltage_range_over , voltage_range_XING ]
+    #Creating an array to add a design buffer to the basic clearance
+    CSA12_DC = CSA11_clearance + Buffer_Live
+
+    #Rounding
+    CSA11_SupplyEquipment = np.round(CSA11_SupplyEquipment, Numpy_round_integer)
+    CSA11_SupplyEquipment_DC = np.round(CSA11_SupplyEquipment_DC, Numpy_round_integer)
+
+    CSA11_neut_clearance = np.round(CSA11_neut_clearance, Numpy_round_integer)
+    CSA11_neut_clearance_DC = np.round(CSA11_neut_clearance_DC, Numpy_round_integer)
+
+    CSA11_clearance = np.round(CSA11_clearance, Numpy_round_integer)
+    CSA11_DC = np.round(CSA11_DC, Numpy_round_integer)
+
+    #Creating the 3 columns that are needed to be outputted to form the dictionary output
+    CSA11_A = np.array([CSA11_SupplyEquipment, CSA11_neut_clearance, CSA11_clearance])
+    CSA11_A_DC = np.array([CSA11_SupplyEquipment_DC, CSA11_neut_clearance_DC, CSA11_DC])
+    CSA11_B = np.array([CSA11_SupplyEquipmentB, CSA11_neut_clearanceB, CSA11_clearanceB])
+
+
+    data = {
+        'Basic': CSA11_A,
+        'Design Clearance': CSA11_A_DC,
+        'B-Measured Vertically Over Land': CSA11_B,
+
+        'Voltage range': Voltage_range,
+        }
+    return data
+CSA11_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live", "XING_P2P_Voltage"]}
+CSA_Table11_data = CSA_Table_11_clearance(**CSA11_input)
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
