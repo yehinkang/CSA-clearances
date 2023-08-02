@@ -24,7 +24,7 @@ ref_table= pd.ExcelFile(ref_table_filepath)
 
 #Let's set up a universal input dictionary
 inputs = {
-    'p2p_voltage': 138,
+    'p2p_voltage': 12,
     'Max_Overvoltage': 0.05,
 
     'Buffer_Neut':4,
@@ -988,6 +988,7 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
 CSA13_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', "XING_P2P_Voltage"]}
 CSA_Table13_data = CSA_Table_13_clearance(**CSA13_input)
 
+#The following function is for CSA Table 14
 def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles):
 
     #Getting Phase to ground voltage
@@ -1056,6 +1057,145 @@ def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles):
     return data
 CSA14_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
 CSA_Table14_data = CSA_Table_14_clearance(**CSA14_input)
+
+#The following function is for CSA Table 15
+#
+#   NOT TOO SURE HOW THE COMMS CLERANCE FOR THIS WORKS ON THE SPREADSHEET
+#
+def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_15 = pd.read_excel(ref_table, "CSA table 15")
+
+    #This will look a bit different since we'll be finding data based on rows vs. columns.
+    #Since .loc is being used to find the row a column must be chosen to use 
+    CSA_15.set_index("Sum of voltages of conductors", inplace = True)
+
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 0.75: 
+        voltage_range = '0 – 750 V'
+        CSA15_clearance = CSA_15.loc['0-750V']
+        CSA15_Comms = CSA_15.loc['> 750 V dc (300 + 6 mm/kV over 750)']
+    else: 
+        voltage_range = '> 750 V'
+        CSA15_clearance = CSA_15.loc['> 750 V ac (300 + 10 mm/kV over 750)']
+        CSA15_clearance = CSA15_clearance + np.ones(len(CSA15_clearance)) * 10 * (voltage - 0.75)
+
+        CSA15_Comms = CSA_15.loc['> 750 V dc (300 + 6 mm/kV over 750)']
+        CSA15_Comms = CSA15_Comms + np.ones(len(CSA15_Comms)) * 6 * (voltage - 0.75)
+
+    #Creating an array to add a design buffer to the basic clearance
+    #Adding factor of 1000 to turn meters into mm
+    buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA15_clearance))
+
+    #Adding the design buffer to get design clearance (DC)
+    CSA15_DC = CSA15_clearance + buffer_array
+    CSA15_Comms_DC = CSA15_Comms + buffer_array
+
+    #Rounding
+    CSA15_clearance = np.round(CSA15_clearance, Numpy_round_integer)
+    CSA15_Comms = np.round(CSA15_Comms, Numpy_round_integer)
+
+    CSA15_DC = np.round(CSA15_DC, Numpy_round_integer)
+    CSA15_Comms_DC = np.round(CSA15_Comms_DC, Numpy_round_integer)
+
+    #Creating the arrays that will be the columns in the spreadsheet, the position has to be specified since these are arrays of len (1) o/w would give brackets around values in table
+    Basic_clearance_array = np.array([CSA15_clearance[0], CSA15_Comms[0]])
+    Basic_clearance_DC = np.array([CSA15_DC[0], CSA15_Comms_DC[0]])
+
+    data = {
+        'Basic': Basic_clearance_array,
+        'DC': Basic_clearance_DC,
+
+        'Voltage range': voltage_range,
+        }
+    return data
+CSA15_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
+CSA_Table15_data = CSA_Table_15_clearance(**CSA15_input)
+
+#The following function is for CSA Table 16
+def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_16 = pd.read_excel(ref_table, "CSA table 16")
+
+    #This will look a bit different since we'll be finding data based on rows vs. columns.
+    #Since .loc is being used to find the row a column must be chosen to use 
+    CSA_16.set_index("Voltage of line conductor", inplace = True)
+
+    #Collecting clearance for neutral and adding a design clearance buffer
+    CSA16_clearance_neut = CSA_16.loc['0-5 (1000 where practicable, but in no case less than. a)150 for spans 0-6m b)230 for spans >6 and < 15m c)300 for spans >15m']
+    CSA16_clearance_neut_DC = CSA16_clearance_neut + np.ones(len(CSA16_clearance_neut)) * Design_buffer_2_obstacles
+    text_neut = ' where practicable, but in no case less than. \n a)150 for spans 0-6m \n b)230 for spans >6 and < 15m \n c)300 for spans >15m'
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 5: 
+        #Voltage range for printing onto table + picking row from which to collect clearance
+        voltage_range = '0 – 5 kV'
+        CSA16_clearance = CSA_16.loc['0-5 (1000 where practicable, but in no case less than. a)150 for spans 0-6m b)230 for spans >6 and < 15m c)300 for spans >15m']
+        #Creating design buffer array to add onto clearance
+        buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
+        CSA16_DC = CSA16_clearance + buffer_array
+        #Adding text that appears with this in CSA table
+        text = ' where practicable, but in no case less than. \n a)150 for spans 0-6m \n b)230 for spans >6 and < 15m \n c)300 for spans >15m'
+    elif voltage <= 22:
+        #Voltage range for printing onto table + picking row from which to collect clearance
+        voltage_range = '5 - 22 kV'
+        CSA16_clearance = CSA_16.loc['> 5 < 22 (1000 wherever practicable, but in no case less than 500)']
+        #Creating design buffer array to add onto clearance
+        buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
+        CSA16_DC = CSA16_clearance + buffer_array
+        #Adding text that appears with this in CSA table
+        text = ' where practicable, but in no case less than 500'
+    elif voltage <= 50:
+        #Voltage range for printing onto table + picking row from which to collect clearance
+        voltage_range = '22 – 50 kV'
+        CSA16_clearance = CSA_16.loc['>22 < 50']
+        #Creating design buffer array to add onto clearance
+        buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
+        CSA16_DC = CSA16_clearance + buffer_array
+        #Adding text that appears with this in CSA table (Not text in this case but kept in order to satisfy a statement later)
+        text = ''
+    else: 
+        #Voltage range for printing onto table + picking row from which to collect clearance
+        voltage_range = '> 50 kV'
+        CSA16_clearance = CSA_16.loc['>50 (+10mm/kV over 50kV)']
+        #this next row is addin the voltage adder as specified in the CSA table
+        CSA16_clearance = CSA16_clearance + np.ones(len(CSA16_clearance)) * (voltage-50) * 10
+        #Creating design buffer array to add onto clearance
+        buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
+        CSA16_DC = CSA16_clearance + buffer_array
+        #Adding text that appears with this in CSA table
+        text = ''
+
+    #Rounding
+    CSA16_clearance = np.round(CSA16_clearance, Numpy_round_integer)
+    CSA16_DC = np.round(CSA16_DC, Numpy_round_integer)
+
+    Basic_annotated = str(CSA16_clearance[0]) + text
+    Basic_neut_annotated = str(CSA16_clearance_neut[0]) + text_neut
+
+    #Creating the arrays that will be shown in the columns of the spreadsheet
+    Basic = np.array([Basic_annotated, Basic_neut_annotated])
+    DC = np.array([float(CSA16_DC), float(CSA16_clearance_neut_DC)])
+
+    data = {
+        'Basic': Basic,
+        'DC': DC,
+
+        'Voltage range': voltage_range,
+        }
+    return data
+CSA16_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
+CSA_Table16_data = CSA_Table_16_clearance(**CSA16_input)
+
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -1952,8 +2092,145 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 15
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table15_data['Voltage range']
+
+    #Creating the title blocks. etc
+    CSA15_cell00 = str(voltage_range)
+    CSA15_cell10 = 'Communication conductors'
+
+    CSA15_titles = np.array([CSA15_cell00, CSA15_cell10])
+    
+    CSA15 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 15 \n Clearances between conductors supported by different structures but not crossing each other — \n Clearance increments to be added to horizontal displacement \n (See clauses 5.8.2 and A.5.8.2.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        [' '],
+        ['Sum of voltages of conductors*', 'Clearance increment, mm'],
+        [' ', 'Basic', 'Design Clearance'],
+            ]
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(2):
+        row = [CSA15_titles[i],  CSA_Table15_data['Basic'][i], CSA_Table15_data['DC'][i]]
+        CSA15.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_15 = len(CSA15)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_15 = len(CSA15[6])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA15 = []
+    for i in range(n_row_CSA_table_15):
+        if i < 3:
+            list_range_color_CSA15.append((i + 1, 1, i + 1, n_column_CSA_table_15, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA15.append((i + 1, 1, i + 1, n_column_CSA_table_15, color_bkg_data_1))
+        else:
+            list_range_color_CSA15.append((i + 1, 1, i + 1, n_column_CSA_table_15, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_15 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 4, n_column_CSA_table_15, 'center'), (5, 1, 6, 1, 'center'), (5, 2, 5, 3, 'center'), (5, 4, 5, 5, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA15,
+        'range_border': [(1, 1, 1, n_column_CSA_table_15), (2, 1, n_row_CSA_table_15, n_column_CSA_table_15)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_15)],
+    }
+
+    # define some footer notes
+    footer_CSA15 = ['* Communication conductors are assumed to operate at less than 130 V dc at 0.25 A or less per pair (1500 pairs or fewer).', 'Voltages are rms line-to-ground.']
+
+    # define the worksheet
+    CSA_Table_15 = {
+        'ws_name': 'CSA Table 15',
+        'ws_content': CSA15,
+        'cell_range_style': cell_format_CSA_15,
+        'footer': footer_CSA15
+    }
+#endregion
+
+#CSA Table 16
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table16_data['Voltage range']
+
+    #Creating the title blocks. etc
+    CSA16_cell00 = str(voltage_range)
+    CSA16_cell10 = 'Communication conductors'
+
+    CSA16_titles = np.array([CSA16_cell00, CSA16_cell10])
+    
+    CSA16 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 16 \n Minimum design clearances between conductors of one line and supporting structures of another line \n (See clause 5.8.3.1.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Voltage of line conductor*, kV', 'Minimum clearance between conductor and supporting structure, mm'],
+        [' ', 'Basic', 'Design Clearance'],
+            ]
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(2):
+        row = [CSA16_titles[i],  CSA_Table16_data['Basic'][i], CSA_Table16_data['DC'][i]]
+        CSA16.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_16 = len(CSA16)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_16 = len(CSA16[6])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA16 = []
+    for i in range(n_row_CSA_table_16):
+        if i < 3:
+            list_range_color_CSA16.append((i + 1, 1, i + 1, n_column_CSA_table_16, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA16.append((i + 1, 1, i + 1, n_column_CSA_table_16, color_bkg_data_1))
+        else:
+            list_range_color_CSA16.append((i + 1, 1, i + 1, n_column_CSA_table_16, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_16 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_16, 'center'), (4, 1, 5, 1, 'center'), (4, 2, 4, 3, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA16,
+        'range_border': [(1, 1, 1, n_column_CSA_table_16), (2, 1, n_row_CSA_table_16, n_column_CSA_table_16)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_16)],
+    }
+
+    # define some footer notes
+    footer_CSA16 = ['* Communication conductors are assumed to operate at less than 130 V dc at 0.25 A or less per pair (1500 pairs or fewer).', 'Voltages are rms line-to-ground.', 'Spans are assumed to be greater than 15m.', 'For line voltages (line to ground) between 0 and 22 kV, clearance of 1 m shall be met wherever practical, but see CSA C22.3 No.1 for details on allowed reductions if necessary.']
+
+    # define the worksheet
+    CSA_Table_16 = {
+        'ws_name': 'CSA Table 16',
+        'ws_content': CSA16,
+        'cell_range_style': cell_format_CSA_16,
+        'footer': footer_CSA16
+    }
+#endregion
+
+
+
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11, CSA_Table_13, CSA_Table_14]
+    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16]
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
