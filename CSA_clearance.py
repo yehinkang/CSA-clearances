@@ -1316,13 +1316,13 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     #Figuring out the correct column name
     if  0 < XING_voltage <= 0.75: 
          voltage_range_lower = 'AC 0-750 V'
-    elif voltage <=5: 
+    elif XING_voltage <=5: 
         voltage_range_lower = 'AC > 0.75 ≤ 5'
-    elif voltage <=22: 
+    elif XING_voltage <=22: 
         voltage_range_lower = 'AC > 5 ≤ 22'
-    elif voltage <=50: 
+    elif XING_voltage <=50: 
         voltage_range_lower = 'AC > 22 ≤ 50'
-    elif voltage <=90: 
+    elif XING_voltage <=90: 
         voltage_range_lower = 'AC > 50 ≤ 90'
     else: 
         voltage_range_lower = 'AC < 120 ≤ 150'
@@ -1409,6 +1409,74 @@ def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 CSA20_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
 CSA_Table20_data = CSA_Table_20_clearance(**CSA20_input)
 
+#The following function is for CSA Table 18
+def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+    XING_voltage = XING_P2P_Voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_21 = pd.read_excel(ref_table, "CSA table 21")
+
+    #Index being set so that row can be found using name
+    CSA_21.set_index("Maximum lower conductor line-to-ground voltage, kV", inplace = True)
+
+    #From the way this table works a specfific cell must be selected using row and column the following if else statements will pick the proper row and column
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 5: 
+        voltage_range_over = '5 kv'
+    elif voltage <=10: 
+        voltage_range_over = '10 kv'
+    elif voltage <=17: 
+        voltage_range_over = '17 kv'
+    elif voltage <=22: 
+        voltage_range_over = '22 kv'
+    elif voltage <=30: 
+        voltage_range_over = '30 kv'
+    elif voltage <=50: 
+        voltage_range_over = '50 kv'
+    else: 
+        voltage_range_over = '90 kv'
+
+    #Figuring out the correct column name
+    if  0 < XING_voltage <= 0.75: 
+         voltage_range_lower = '0.75 kv'
+    elif XING_voltage <=5: 
+        voltage_range_lower = '5 kv'
+    elif XING_voltage <=10: 
+        voltage_range_lower = '10 kv'
+    elif XING_voltage <=17: 
+        voltage_range_lower = '17 kv'
+    elif XING_voltage <=22: 
+        voltage_range_lower = '22 kv'
+    elif XING_voltage <=30: 
+        voltage_range_lower = '30 kv'
+    elif XING_voltage <=50: 
+        voltage_range_lower = '50 kv'
+    else: 
+        voltage_range_lower = '90 kv'
+
+    #Clearance values
+    CSA21_clearance = CSA_21.at[ voltage_range_lower , voltage_range_over ]
+    CSA21_DC = float(CSA21_clearance) + Design_Buffer_Same_Structure
+
+    #Rounding
+    CSA21_clearance = np.round(CSA21_clearance, Numpy_round_integer)
+    CSA21_DC = np.round(CSA21_DC, Numpy_round_integer)
+
+    data = {
+        'Basic': CSA21_clearance,
+        'Design Clearance': CSA21_DC,
+
+        'Voltage range': voltage_range_over,
+        'Voltage range under': voltage_range_lower,
+        }
+    
+    return data
+CSA21_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage"]}
+CSA_Table21_data = CSA_Table_21_clearance(**CSA21_input)
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
