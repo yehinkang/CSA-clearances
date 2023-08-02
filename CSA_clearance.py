@@ -1196,6 +1196,95 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
 CSA16_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
 CSA_Table16_data = CSA_Table_16_clearance(**CSA16_input)
 
+#The following function is for CSA Table 17
+def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, Final_Unloaded_Sag_15C):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_17 = pd.read_excel(ref_table, "CSA table 17")
+
+    #This will look a bit different since we'll be finding data based on rows vs. columns.
+    #Since .loc is being used to find the row a column must be chosen to use 
+    CSA_17.set_index("Line conductor", inplace = True)
+
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 5 and Span_Length <= 6: 
+        #Voltage range and span length range to print on the spreadsheet
+        voltage_range = '0 – 5 kV†'
+        Span_Range = '0-6 m'
+        CSA17_clearance = CSA_17.loc['0-5 kV ac 0 - 6 m'][0]
+        #Creating design buffer array to add onto clearance
+        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
+        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+
+    elif 0 < voltage <= 5 and Span_Length <= 50: 
+        #Voltage range and span length range to print on the spreadsheet
+        voltage_range = '0 – 5 kV†'
+        Span_Range = '> 6 < 50 m'
+        CSA17_clearance = CSA_17.loc['0-5 kV ac > 6 < 50 m'][0]
+        #Creating design buffer array to add onto clearance
+        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
+        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+
+    elif 0 < voltage <= 5 and Span_Length > 50 : 
+        #Voltage range and span length range to print on the spreadsheet
+        voltage_range = '0 – 5 kV†'
+        Span_Range = '> 50 < 450 m'
+        CSA17_clearance = CSA_17.loc['0-5 kV ac  > 50 < 450 m a )3 x the distance (in m) by which the span length exceeds 50 m; b)83 x the final unloaded sag (in m) at 15C conductor temperature for conductor(s) having the greatest sag; and c)10 mm/kV over 5 kV.'][0]
+        CSA17_clearance = CSA17_clearance + (3*(Span_Length - 50)) + (83*(Final_Unloaded_Sag_15C))
+        #Creating design buffer array to add onto clearance
+        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
+        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+
+    elif voltage > 5 and Span_Length <= 50: 
+        #Voltage range and span length range to print on the spreadsheet
+        voltage_range = '> 5 kV†'
+        Span_Range = '< 50 m'
+        CSA17_clearance = CSA_17.loc['> 5kV ac < 50 m + 10 mm/kV over 1kV'][0]
+        CSA17_clearance = CSA17_clearance + 10 * (voltage - 1)
+        #Creating design buffer array to add onto clearance
+        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
+        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+
+    elif voltage > 5 and Span_Length <= 450: 
+        #Voltage range and span length range to print on the spreadsheet
+        voltage_range = '> 5 kV†'
+        Span_Range = '> 50 < 450 m'
+        CSA17_clearance = CSA_17.loc['> 5kV ac > 50 < 450 m a )3 x the distance (in m) by which the span length exceeds 50 m; b)83 x the final unloaded sag (in m) at 15C conductor temperature for conductor(s) having the greatest sag; and c)10 mm/kV over 5 kV.'][0]
+        CSA17_clearance = CSA17_clearance + (3*(Span_Length - 50)) + (83*(Final_Unloaded_Sag_15C)) + (10*(voltage-5))
+        #Creating design buffer array to add onto clearance
+        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
+        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+
+    else:
+        #Voltage range and span length range to print on the spreadsheet
+        voltage_range = '*'
+        Span_Range = '> 50 < 450 m'
+        CSA17_clearance = 'For spans longer than 450 m, the separation shall be based on best engineering practices, but shall be not less than the separations specified for spans of 450 m.'
+        #Creating design buffer array to add onto clearance
+        CSA17_DC = 'For spans longer than 450 m, the separation shall be based on best engineering practices, but shall be not less than the separations specified for spans of 450 m.'
+
+
+    #Creating the arrays that will be shown in the columns of the spreadsheet
+    data = {
+        'Basic': CSA17_clearance,
+        'DC': CSA17_DC,
+
+        'Voltage range': voltage_range,
+        'Span Range': Span_Range
+        }
+    return data
+CSA17_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'Span_Length', 'Final_Unloaded_Sag_15C']}
+CSA_Table17_data = CSA_Table_17_clearance(**CSA17_input)
+
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -2227,10 +2316,72 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 17
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table17_data['Voltage range']
+    span_range = CSA_Table17_data['Span Range']
+
+    #Creating the title blocks. etc
+    CSA17_cell00 = str(voltage_range)
+    
+    CSA17 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 17 \n Minimum horizontal separations of supply-line conductors attached to the same supporting structure \n (See clauses 5.9.1.1, 5.9.1.2, and 5.9.1.3.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Line conductor', 'Minimum horizontal separation of conductors for spans mm'],
+        [' ', 'span ' + str(span_range)],
+        [' ', 'Basic', 'Design Clearance'],
+        [CSA17_cell00 ,  CSA_Table17_data['Basic'], CSA_Table17_data['DC']]
+            ]
+    
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_17 = len(CSA17)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_17 = len(CSA17[5])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA17 = []
+    for i in range(n_row_CSA_table_17):
+        if i < 3:
+            list_range_color_CSA17.append((i + 1, 1, i + 1, n_column_CSA_table_17, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA17.append((i + 1, 1, i + 1, n_column_CSA_table_17, color_bkg_data_1))
+        else:
+            list_range_color_CSA17.append((i + 1, 1, i + 1, n_column_CSA_table_17, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_17 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_17, 'center'), (4, 1, 6, 1, 'center'), (4, 2, 4, 3, 'center'), (5, 2, 5, 3, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA17,
+        'range_border': [(1, 1, 1, n_column_CSA_table_17), (2, 1, n_row_CSA_table_17, n_column_CSA_table_17)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_17)],
+    }
+
+    # define some footer notes
+    footer_CSA17 = [' For spans longer than 450 m, the separation shall be based on best engineering practices, but shall be not less than the separations specified for spans of 450 m.', '† Phase-to-phase voltages for the same circuit or the sum of phase-to-ground voltages for different circuits']
+
+    # define the worksheet
+    CSA_Table_17 = {
+        'ws_name': 'CSA Table 17',
+        'ws_content': CSA17,
+        'cell_range_style': cell_format_CSA_17,
+        'footer': footer_CSA17
+    }
+#endregion
 
 
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16]
+    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17]
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
