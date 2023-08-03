@@ -1556,6 +1556,114 @@ def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 CSA22_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
 CSA_Table22_data = CSA_Table_22_clearance(**CSA22_input)
 
+#The following function is for CSA Table 23
+def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_23 = pd.read_excel(ref_table, "CSA table 23")
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 0.75: 
+        CSA23_clearance = CSA_23['0-750 V']
+        voltage_range = '0 - 750 V'
+    elif voltage <= 22: 
+        CSA23_clearance = CSA_23['> 0.75 < 22 kV']
+        voltage_range = '> 0.75 ≤ 5 kV'
+    else:
+        CSA23_clearance = CSA_23['> 22 < 50 kV*']
+        voltage_range = '> 22 kV *'
+
+    #Defiining an array that will contain the design clearance
+    CSA_23_Design_Clearance = []
+
+    #For loop to add clearance onto Table 22 values regardless of if there are symbols on the number
+    for item in CSA23_clearance:
+        #First checks if value is an integer and if so adds the clearance
+        if isinstance(item, int):
+            CSA_23_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+        #Then checks if value is a float and if so adds the clearance
+        elif isinstance(item, float):
+            CSA_23_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+        #If the value is a string it will search trough the string for integers or floats
+        elif isinstance(item, str):
+            match = re.search(r'\d+(\.\d+)?', item)
+            #if a number is found in the string it will take the number out and add onto that number and then return a new number
+            if match:
+                num = float(match.group())
+                new_num = num + Design_Buffer_Same_Structure
+                new_item = item[:match.start()] + str(new_num) + item[match.end():]
+                #This new number is then appended to the array
+                CSA_23_Design_Clearance.append(new_item)
+            #If no number is found the original string passes through into the new array
+            else:
+                CSA_23_Design_Clearance.append(item)
+        #If there is something that is not a string, float or integer it will pass into the new array unchanged
+        else:
+            CSA_23_Design_Clearance.append(item)
+
+    CSA_23_Design_Clearance = np.array(CSA_23_Design_Clearance)
+
+
+    data = {
+        'Basic': CSA23_clearance,
+        'DC': CSA_23_Design_Clearance,
+
+        'Voltage range': voltage_range
+        }
+    return data
+CSA23_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA_Table23_data = CSA_Table_23_clearance(**CSA23_input)
+
+#The following function is for CSA Table 23
+def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_24 = pd.read_excel(ref_table, "CSA table 24")
+
+    #Index being set so that row can be found using name
+    CSA_24.set_index("Voltage of supply conductor", inplace = True)
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 0.75: 
+        CSA24_clearance = CSA_24.loc['0—750 V with other covering or bare'][0]
+        voltage_range = '0 - 750 V'
+    elif voltage <= 22: 
+        CSA24_clearance = CSA_24.loc['> 0.75 kV and ≤ 15 kV'][0]
+        voltage_range = '> 0.75 kV and ≤ 15 kV'
+    elif voltage <= 22: 
+        CSA24_clearance = CSA_24.loc['> 15 kVand ≤ 22 kV'][0]
+        voltage_range = '> 15 kV and ≤ 22 kV'
+    else:
+        CSA24_clearance = CSA_24.loc['> 22 kV and ≤ 250 kV (+10mm/kV over 22kV)'][0]
+        voltage_range = '> 22 kV and ≤ 250 kV'
+
+    
+    #Figuring out if the number has any symbols attached to it
+    #If there are symbols they will be removed so addition can be done and then added back in
+    if isinstance(CSA24_clearance, int):
+        CSA_24_Design_Clearance = CSA24_clearance + Design_Buffer_Same_Structure
+    elif isinstance(CSA24_clearance, float):
+        CSA_24_Design_Clearance = CSA24_clearance + Design_Buffer_Same_Structure
+    elif isinstance(CSA_24_Design_Clearance, str):
+        num = float(CSA_24_Design_Clearance.rstrip('*†‡'))
+        CSA_24_Design_Clearance = f"{num + Design_Buffer_Same_Structure}{CSA24_clearance[len(str(int(num))):]}"
+
+    data = {
+        'Basic': CSA24_clearance,
+        'DC': CSA_24_Design_Clearance,
+
+        'Voltage range': voltage_range
+        }
+    return data
+CSA24_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA_Table24_data = CSA_Table_24_clearance(**CSA24_input)
+
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
 
@@ -2919,10 +3027,180 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 23
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table23_data['Voltage range']
+
+    #Creating the title blocks. etc
+    CSA23_cell00 = 'Live or current-carrying supply plant (including neutrals) and communication line plant'
+    CSA23_cell10 = 'Non-energized supply plant (excluding luminaire span wire and brackets) and communication line plant'
+    CSA23_cell20 = ' '
+    CSA23_cell30 = ' '
+    CSA23_cell40 = ' '
+    CSA23_cell50 = 'Trolley span wires or brackets and communication line plant'
+    CSA23_cell60 = 'Luminaire span wires or brackets and communication line plant'
+    CSA23_cell70 = ''
+    CSA23_cell80 = 'Point of attachment of combined communication drop and supply service conductor and communication line plant'
+    CSA23_cell90 = 'Housing containing communication power supply, communication compressor dehydrator, or other communication equipment (effectively grounded or insulated) and communication cable'
+
+    CSA23_cell01 = ' '
+    CSA23_cell11 = 'Option A§'
+    CSA23_cell21 = ' '
+    CSA23_cell31 = 'Option B§'
+    CSA23_cell41 = ' '
+    CSA23_cell51 = ' '
+    CSA23_cell61 = ' '
+    CSA23_cell71 = ' '
+    CSA23_cell81 = ' '
+    CSA23_cell91 = ' '
+
+    CSA23_cell02 = ' '
+    CSA23_cell12 = 'Ungrounded'
+    CSA23_cell22 = 'Effectively Grounded'
+    CSA23_cell32 = 'Ungrounded'
+    CSA23_cell42 = 'Effectively Grounded'
+    CSA23_cell52 = ' '
+    CSA23_cell62 = 'Ungrounded'
+    CSA23_cell72 = 'Effectively Grounded'
+    CSA23_cell82 = ' '
+    CSA23_cell92 = ' '
+
+    CSA23titles = np.array([CSA23_cell00, CSA23_cell10, CSA23_cell20, CSA23_cell30, CSA23_cell40, CSA23_cell50, CSA23_cell60, CSA23_cell70, CSA23_cell80, CSA23_cell90])
+    CSA23_1in = np.array([CSA23_cell01, CSA23_cell11, CSA23_cell21, CSA23_cell31, CSA23_cell41, CSA23_cell51, CSA23_cell61, CSA23_cell71, CSA23_cell81, CSA23_cell91])
+    CSA23_2in = np.array([CSA23_cell02, CSA23_cell12, CSA23_cell22, CSA23_cell32, CSA23_cell42, CSA23_cell52, CSA23_cell62, CSA23_cell72, CSA23_cell82, CSA23_cell92])
+    
+    CSA23 = ([
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 23 \n \
+         Minimum vertical separations at a joint-use structure \n \
+         (See clauses 5.10.1.1, 5.10.1.6, 5.10.1.7, 5.10.6.2 and A.5.10.1 and figures A.10 and A.11.) \n \
+         System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Between', ' ', ' ','Minimum vertical separation, m'],
+        [' ', ' ', ' ', 'Voltage of supply conductors'],
+        [' ', ' ', ' ', str(voltage_range)],
+        [' ', ' ', ' ', 'Basic', 'Design Clearance'],
+            ])
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(10):
+        row = [CSA23titles[i], CSA23_1in[i], CSA23_2in[i], CSA_Table23_data['Basic'][i], CSA_Table23_data['DC'][i]]
+        CSA23.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_23 = len(CSA23)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_23 = len(CSA23[9])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA23 = []
+    for i in range(n_row_CSA_table_23):
+        if i < 3:
+            list_range_color_CSA23.append((i + 1, 1, i + 1, n_column_CSA_table_23, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA23.append((i + 1, 1, i + 1, n_column_CSA_table_23, color_bkg_data_1))
+        else:
+            list_range_color_CSA23.append((i + 1, 1, i + 1, n_column_CSA_table_23, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_23 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': ([(1, 1, 3, n_column_CSA_table_23, 'center'), (4, 1, 7, 3, 'center'), (4, 4, 4, 5, 'center'), (5, 4, 5, 5, 'center'), (6, 4, 6, 5, 'center'), (8, 1, 8, 3, 'center'),
+                         (9, 1, 12, 1, 'center'), (9, 2, 10, 2, 'center'), (11, 2, 12, 2, 'center'), (13, 1, 13, 3, 'center'), (14, 1, 15, 2, 'center'), (16, 1, 16, 3, 'center'), (17, 1, 17, 3, 'center')]),
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA23,
+        'range_border': [(1, 1, 1, n_column_CSA_table_23), (2, 1, n_row_CSA_table_23, n_column_CSA_table_23)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_23)],
+    }
+
+    # define some footer notes
+    footer_CSA23 = (['† On lateral communication drop wire plant, this separation may be reduced to 0.6 m.', 
+                     '‡ See Clause 5.2.7 for requirements for neutral conductors.',
+                     '§ Option A or Option B shall be selected in accordance with Clauses 5.10.1.6 and 5.10.1.7.',
+                     'Voltages are rms line-to-ground.'])
+
+    # define the worksheet
+    CSA_Table_23 = {
+        'ws_name': 'CSA Table 23',
+        'ws_content': CSA23,
+        'cell_range_style': cell_format_CSA_23,
+        'footer': footer_CSA23
+    }
+#endregion
+
+#CSA Table 24
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table24_data['Voltage range']
+    
+    CSA24 = ([
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 24 \n \
+         Minimum in-span vertical clearances between supply and communication conductors \n \
+         (See clauses 5.10.3.2 and A.5.10.3.) \n \
+         System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Voltage of supply conductor','Minimum clearance of supply conductor above line of sight of points of support of highest communication wire or cable, mm'],
+        [' ', 'Basic', 'Design Clearance'],
+        [str(voltage_range), CSA_Table24_data['Basic'], CSA_Table24_data['DC']]
+            ])
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_24 = len(CSA24)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_24 = len(CSA24[5])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA24 = []
+    for i in range(n_row_CSA_table_24):
+        if i < 3:
+            list_range_color_CSA24.append((i + 1, 1, i + 1, n_column_CSA_table_24, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA24.append((i + 1, 1, i + 1, n_column_CSA_table_24, color_bkg_data_1))
+        else:
+            list_range_color_CSA24.append((i + 1, 1, i + 1, n_column_CSA_table_24, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_24 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': ([(1, 1, 3, n_column_CSA_table_24, 'center'), (4, 1, 5, 1, 'center'), (4, 2, 4, 3, 'center')]),
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA24,
+        'range_border': [(1, 1, 1, n_column_CSA_table_24), (2, 1, n_row_CSA_table_24, n_column_CSA_table_24)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_24)],
+    }
+
+    # define some footer notes
+    footer_CSA24 = (['* For effectively grounded neutral, see Clause 5.10.3.3.', 
+                     '† While the use of the design limit of 75 mm can yield a minimum actual clearance of approximately 300 mm under the worst expected conditions, most situations will result in clearances in excess of 600 mm.',
+                     'Voltages are rms line-to-ground.'])
+
+    # define the worksheet
+    CSA_Table_24 = {
+        'ws_name': 'CSA Table 24',
+        'ws_content': CSA24,
+        'cell_range_style': cell_format_CSA_24,
+        'footer': footer_CSA24
+    }
+#endregion
 
     #This determines the workbook and the worksheets within the workbook
     workbook_content = ([AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10,
-                         CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17, CSA_Table_18, CSA_Table_20, CSA_Table_21, CSA_Table_22])
+                         CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17, CSA_Table_18, CSA_Table_20, 
+                         CSA_Table_21, CSA_Table_22, CSA_Table_23, CSA_Table_24])
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
