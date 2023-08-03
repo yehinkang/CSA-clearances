@@ -5,7 +5,8 @@ import pandas as pd
 import numpy as np
 import sys
 from commons import report_xlsx_general
-import time
+import re
+
 #The following can be toggled in order to see an unabridged numpy array
 np.set_printoptions(threshold=sys.maxsize)
 
@@ -24,7 +25,7 @@ ref_table= pd.ExcelFile(ref_table_filepath)
 
 #Let's set up a universal input dictionary
 inputs = {
-    'p2p_voltage': 12,
+    'p2p_voltage': 69,
     'Max_Overvoltage': 0.05,
 
     'Buffer_Neut':4,
@@ -1286,6 +1287,9 @@ CSA17_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obst
 CSA_Table17_data = CSA_Table_17_clearance(**CSA17_input)
 
 #The following function is for CSA Table 18
+#
+#  Need to add upper lower wire toggle
+#
 def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage):
 
     #Getting Phase to ground voltage
@@ -1340,7 +1344,6 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
         CSA18_DC = str(CSA18_DC) + "†"
         CSA18_clearance = str(CSA18_clearance) + "†"
 
-
     #Error message incase the voltage below is highe rthan the one above
     if voltage_range_lower > voltage_range_over:
         CSA18_clearance = "Error higher voltage below lower voltage"
@@ -1358,7 +1361,7 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
 CSA18_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage"]}
 CSA_Table18_data = CSA_Table_18_clearance(**CSA18_input)
 
-#The following function is for CSA Table 17
+#The following function is for CSA Table 20
 def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 
     #Getting Phase to ground voltage
@@ -1409,7 +1412,10 @@ def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 CSA20_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
 CSA_Table20_data = CSA_Table_20_clearance(**CSA20_input)
 
-#The following function is for CSA Table 18
+#The following function is for CSA Table 21
+#
+#  Need to add upper lower wire toggle
+#
 def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage):
 
     #Getting Phase to ground voltage
@@ -1466,6 +1472,11 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     CSA21_clearance = np.round(CSA21_clearance, Numpy_round_integer)
     CSA21_DC = np.round(CSA21_DC, Numpy_round_integer)
 
+    #Error message incase the voltage below is highe rthan the one above
+    if voltage_range_lower > voltage_range_over:
+        CSA21_clearance = "Error higher voltage below lower voltage"
+        CSA21_DC = "Error higher voltage below lower voltage"
+
     data = {
         'Basic': CSA21_clearance,
         'Design Clearance': CSA21_DC,
@@ -1477,6 +1488,73 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     return data
 CSA21_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage"]}
 CSA_Table21_data = CSA_Table_21_clearance(**CSA21_input)
+
+#The following function is for CSA Table 22
+def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_22 = pd.read_excel(ref_table, "CSA table 22")
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 0.75: 
+        CSA22_clearance = CSA_22['0-750 V']
+        voltage_range = '0 - 750 V'
+    elif voltage <= 5: 
+        CSA22_clearance = CSA_22['> 0.75 kV < 5 kV']
+        voltage_range = '> 0.75 ≤ 5 kV'
+    elif voltage <= 10: 
+        CSA22_clearance = CSA_22['> 5 < 22 kV']
+        voltage_range = '> 5 ≤ 22 kV'
+    elif voltage <= 10: 
+        CSA22_clearance = CSA_22['> 22 < 50 kV']
+        voltage_range = '> 22 ≤ 50 kV'
+    else:
+        CSA22_clearance = CSA_22['> 50 kV']
+        voltage_range = '> 50 kV'
+
+    #Defiining an array that will contain the design clearance
+    CSA_22_Design_Clearance = []
+
+    #For loop to add clearance onto Table 22 values regardless of if there are symbols on the number
+    for item in CSA22_clearance:
+        #First checks if value is an integer and if so adds the clearance
+        if isinstance(item, int):
+            CSA_22_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+        #Then checks if value is a float and if so adds the clearance
+        elif isinstance(item, float):
+            CSA_22_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+        #If the value is a string it will search trough the string for integers or floats
+        elif isinstance(item, str):
+            match = re.search(r'\d+(\.\d+)?', item)
+            #if a number is found in the string it will take the number out and add onto that number and then return a new number
+            if match:
+                num = float(match.group())
+                new_num = num + Design_Buffer_Same_Structure
+                new_item = item[:match.start()] + str(new_num) + item[match.end():]
+                #This new number is then appended to the array
+                CSA_22_Design_Clearance.append(new_item)
+            #If no number is found the original string passes through into the new array
+            else:
+                CSA_22_Design_Clearance.append(item)
+        #If there is something that is not a string, float or integer it will pass into the new array unchanged
+        else:
+            CSA_22_Design_Clearance.append(item)
+
+    CSA_22_Design_Clearance = np.array(CSA_22_Design_Clearance)
+
+
+    data = {
+        'Basic': CSA22_clearance,
+        'DC': CSA_22_Design_Clearance,
+
+        'Voltage range': voltage_range
+        }
+    return data
+CSA22_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA_Table22_data = CSA_Table_22_clearance(**CSA22_input)
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -2694,8 +2772,70 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 21
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table21_data['Voltage range']
+    voltage_range_XING = CSA_Table21_data['Voltage range under']
+
+    #Creating the title blocks. etc
+    CSA21_cell00 = str(voltage_range)
+    
+    CSA21 = [
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 21 \n Minimum in-span vertical clearances between supply conductors of different circuits that are attached to the same supporting structure \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Maximum lower conductor line-to-ground voltage, kV', 'Minimum in-span vertical clearance, mm'],
+        [' ', 'Maximum upper conductor line-to-ground voltage, kV', ' '],
+        [' ', str(voltage_range_XING), ' '],
+        [' ', 'Basic', 'Design Clearance'],
+        [CSA21_cell00 ,  CSA_Table21_data['Basic'], CSA_Table21_data['Design Clearance']]
+            ]
+    
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_21 = len(CSA21)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_21 = len(CSA21[6])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA21 = []
+    for i in range(n_row_CSA_table_21):
+        if i < 3:
+            list_range_color_CSA21.append((i + 1, 1, i + 1, n_column_CSA_table_21, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA21.append((i + 1, 1, i + 1, n_column_CSA_table_21, color_bkg_data_1))
+        else:
+            list_range_color_CSA21.append((i + 1, 1, i + 1, n_column_CSA_table_21, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_21 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_21, 'center'), (4, 1, 7, 1, 'center'), (4, 2, 4, 3, 'center'), (5, 2, 5, 3, 'center'),(6, 2, 6, 3, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA21,
+        'range_border': [(1, 1, 1, n_column_CSA_table_21), (2, 1, n_row_CSA_table_21, n_column_CSA_table_21)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_21)],
+    }
+
+    # This table has no footer notes
+
+    # define the worksheet
+    CSA_Table_21 = {
+        'ws_name': 'CSA Table 21',
+        'ws_content': CSA21,
+        'cell_range_style': cell_format_CSA_21,
+    }
+#endregion
+
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17, CSA_Table_18, CSA_Table_20]
+    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17, CSA_Table_18, CSA_Table_20, CSA_Table_21]
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
