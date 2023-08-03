@@ -1,29 +1,32 @@
+""" 
+BREAKDOWN OF HOW THE CSA CLEARANCES PYTHON SCRIPT WORKS:
+This code takes inputs in a dictionary
+This dictionary is then used to input the code into different functions (1 function per table)
+The functions then call back to a spreadsheet referenceed locally using pandas, each sheet in this spreadsheet corresponds to a CSA table
+From there the functions perform necessary operations and then spit out a dictionary that can then be exported to a webserver
+These dictionaries are also used to put together an excel file using the report_xlsx_general script
+This file is then saved locally to a selected folder
+"""
+
 #importing the following packages
 import os, math, json, copy, re
 from datetime import datetime
 import pandas as pd
 import numpy as np
 import sys
-from commons import report_xlsx_general
-import re
 
-#The following can be toggled in order to see an unabridged numpy array
+#The following is referenced locally commons is a file and report_xlsx_general is another python script
+from commons import report_xlsx_general
+
+#The following is being used to see full arrays being printed out in the terminal instead of [a, b, c, ..., z], this is mostly for troubleshooting
 np.set_printoptions(threshold=sys.maxsize)
 
-"""
-This code will function by taking inputs in and using them to reference a spreadsheet.
-From this spreadsheet results can then be computed and exported to another table.
-This was done as tables can be easily updated by humans should there be changes to a standard in the future.
-I'm unfamiliar with flask and as such there is nothing in the way of web integration thus far.
-"""
-
-#This is where the reference file is located
+#This is the full filepath for the reference spreadsheet
 ref_table_filepath = r"C:\Users\yekang\OneDrive - POWER Engineers, Inc\Desktop\Python Stuff\Clearance Calcs\CSA-clearances\AEUC_CSA_clearances.xlsx"
-
-#Indicated the location of the excel file and loads it into python, this ensures the file is only read once
+#This uses pandas to load in the excel file
 ref_table= pd.ExcelFile(ref_table_filepath)
 
-#Let's set up a universal input dictionary
+#This is the input dictionary that all functions will use
 inputs = {
     'p2p_voltage': 69,
     'Max_Overvoltage': 0.05,
@@ -39,10 +42,6 @@ inputs = {
     #There will need to be a dropdown menu made on the webpage with matching locations made on the webpage
     'Location': "Alberta Camrose",
 
-    #Add these as check boxes in the webpage
-    'grounded': False,
-    'sheathed': False,
-
     #Latitude_Northing
         'Northing_deg':53.02,
         'Northing_mins':0,
@@ -54,7 +53,6 @@ inputs = {
         'Westing_seconds':0,
 
     # Loc_Elevation (Calculated fromt he coordinates)
-
     'Custom_Elevation':1200,
 
     #Table 17 Horizontal Conductor Seperations
@@ -62,8 +60,7 @@ inputs = {
         'Final_Unloaded_Sag_15C':1,
 
     #Crossing_or_Underbuild
-        'Is_main_wire_upper':False,
-        'lower wire':True,
+        'Is_main_wire_upper':True,
         'XING_P2P_Voltage':79,
         'XING_Max_Overvoltage':0.05,
 
@@ -76,15 +73,18 @@ def decimal_points(num):
         return len(num_str.split('.')[1])
     else:
         return 0
+#Running the function
 Clearance_Rounding = {key: inputs[key] for key in ['Clearance_Rounding']}
 Nums_after_decimal = Clearance_Rounding['Clearance_Rounding']
 Numpy_round_integer = decimal_points(Nums_after_decimal)
 
 #The following function will take a dictionary x and export it into excel using pandas(useful for troubleshooting dictionary outputs)
 def save2xl(x):
-    #Insert desired filepath here, can rename later
+    #Pandas being used to export the dataframe
     Excel_export = pd.DataFrame(x)
+    #desired filepath for sheet
     folder = "C:/Users/yekang/OneDrive - POWER Engineers, Inc/Desktop/Python Stuff/Clearance Calcs/Samples/"
+    #This will be the name of the sheet, using current time down to the second to ensure that the file name is unique
     start = datetime.now().strftime("Clearance_Calc %Y-%d-%m-%H-%M-%S")
     fname = folder + start + ".xlsx"
     print("saving to", fname)
@@ -185,8 +185,8 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         column = "VII"
     else: 
         #this column is for 1000 kV Pole-Pole
-        AEUC_clearance = AEUC_5['+/- 500 kVDC']
-        voltage_range = '1000 kVDC Pole-to-Pole'
+        AEUC_clearance = AEUC_5['+/- 500 kVDesign_Clearance']
+        voltage_range = '1000 kVDesign_Clearance Pole-to-Pole'
         column = "VIII"
 
     #Adders will have to be multiplied by a series so that it only applies to the correct rows
@@ -253,7 +253,7 @@ AEUC5_input = {key: inputs[key] for key in ['p2p_voltage', 'Buffer_Neut', 'Buffe
 AEUC_Table5_data  = AEUC_table5_clearance(**AEUC5_input)
 
 #The following function is for AEUC table 7
-def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obstacles):
+def AEUC_table7_clearance(p2p_voltage, Design_buffer_2_obstacles):
 
     voltage = p2p_voltage / np.sqrt(3)
     #Start by opening the sheet for AEUC Table 7 within the reference table file
@@ -269,26 +269,12 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
 
     #Figuring out the clearance to use with the conductor voltage
     if 0 < voltage <= 0.75:
-        if sheathed == True:
-            #Specify the row that is being used for this
-            AEUC_clearance = AEUC_7.loc['0 - 750 V Enclosed in effectively grounded metallic sheath'].values
-            AEUC_voltage_adder = 0
-        if grounded == True:
-            #Specify the row that is being used for this
-            AEUC_clearance = AEUC_7.loc['0 - 750 V Insulated or grounded'].values
-            AEUC_voltage_adder = 0
-        else:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0 - 750 V Neither insulated or grounded or enclosed in effectively grounded metallic sheath'].values
             AEUC_voltage_adder = 0
     elif 0.75 < voltage <= 22:
-        if sheathed == False:
             #Specify the row that is being used for this
             AEUC_clearance = AEUC_7.loc['0.75 - 22kV Not enclosed in  effectively grounded metallic sheath'].values
-            AEUC_voltage_adder = 0
-        else:
-            #Specify the row that is being used for this
-            AEUC_clearance = AEUC_7.loc['0.75 - 22kV Enclosed in effectively grounded metallic sheath'].values
             AEUC_voltage_adder = 0
     else:
         #Specify the row that is being used for this
@@ -302,26 +288,26 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
     Design_buffer_2_obstacles = np.round(Design_buffer_2_obstacles, Numpy_round_integer)
 
     #Turning the rows into columns for easier display
-    #Indexing certain elements in the array BA = basic, VA = Voltage Adder, AT = AEUC Total, DC = Design Clearance
+    #Indexing certain elements in the array BA = basic, VA = Voltage Adder, AT = AEUC Total, Design_Clearance = Design Clearance
     H2building_BA = np.array([AEUC_neut_clearance_basic[0], AEUC_clearance[0]])
     H2building_VA = np.array([0, AEUC_voltage_adder])
     H2building_AT = np.array([AEUC_neut_clearance_basic[0], (AEUC_clearance[0] + AEUC_voltage_adder)])
-    H2building_DC = np.array([AEUC_neut_clearance[0], (AEUC_clearance[0] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+    H2building_Design_Clearance = np.array([AEUC_neut_clearance[0], (AEUC_clearance[0] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
     V2building_BA = np.array([AEUC_neut_clearance_basic[1], AEUC_clearance[1]])
     V2building_VA = H2building_VA
     V2building_AT = np.array([AEUC_neut_clearance_basic[1], (AEUC_clearance[1] + AEUC_voltage_adder)])
-    V2building_DC = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+    V2building_Design_Clearance = np.array([AEUC_neut_clearance[1], (AEUC_clearance[1] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
     H2object_BA = np.array([AEUC_neut_clearance_basic[2], AEUC_clearance[2]])
     H2object_VA = H2building_VA
     H2object_AT = np.array([AEUC_neut_clearance_basic[2], (AEUC_clearance[2] + AEUC_voltage_adder)])
-    H2object_DC = np.array([AEUC_neut_clearance[2], (AEUC_clearance[2] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+    H2object_Design_Clearance = np.array([AEUC_neut_clearance[2], (AEUC_clearance[2] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
     V2object_BA = np.array([AEUC_neut_clearance_basic[3], AEUC_clearance[3]])
     V2object_VA = H2building_VA
     V2object_AT = np.array([AEUC_neut_clearance_basic[3], (AEUC_clearance[3] + AEUC_voltage_adder)])
-    V2object_DC = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
+    V2object_Design_Clearance = np.array([AEUC_neut_clearance[3], (AEUC_clearance[3] + AEUC_voltage_adder + Design_buffer_2_obstacles)])
 
     Categories = np.array(["Guys, communication cables, and drop wires", "Supply conductors"])
 
@@ -331,26 +317,26 @@ def AEUC_table7_clearance(p2p_voltage, grounded, sheathed, Design_buffer_2_obsta
         'Building Horizontal to Surface Basic': H2building_BA,
         'Building Horizontal to Surface Voltage Adder': H2building_VA,
         'Building Horizontal to Surface AEUC Total': H2building_AT,
-        'Building Horizontal to Surface Design Clearance': H2building_DC,
+        'Building Horizontal to Surface Design Clearance': H2building_Design_Clearance,
 
         'Building Vertical to Surface Basic': V2building_BA,
         'Building Vertical to Surface Voltage Adder': V2building_VA,
         'Building Vertical to Surface AEUC Total': V2building_AT,
-        'Building Vertical to Surface Clearance': V2building_DC,
+        'Building Vertical to Surface Clearance': V2building_Design_Clearance,
 
         'Obstacle Horizontal to Surface Basic': H2object_BA,
         'Obstacle Horizontal to Surface Voltage Adder': H2object_VA,
         'Obstacle Horizontal to Surface AEUC Total': H2object_AT,
-        'Obstacle Horizontal to Surface Clearance': H2object_DC,
+        'Obstacle Horizontal to Surface Clearance': H2object_Design_Clearance,
 
         'Obstacle Vertical to Surface Basic': V2object_BA,
         'Obstacle Vertical to Surface Voltage Adder': V2object_VA,
         'Obstacle Vertical to Surface AEUC Total': V2object_AT,
-        'Obstacle Vertical to Surface Clearance': V2object_DC,
+        'Obstacle Vertical to Surface Clearance': V2object_Design_Clearance,
         }
     
     return data
-AEUC7_input = {key: inputs[key] for key in ['p2p_voltage', "grounded", "sheathed", 'Design_buffer_2_obstacles']}
+AEUC7_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
 AEUC_Table7_data = AEUC_table7_clearance(**AEUC7_input)
 
 #The following function is for CSA Table 2
@@ -429,19 +415,19 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     Neutral_CSA_Total = Snow_Adder + Repave_Adder + CSA_2_neut_clearance
     CSA_Total = Snow_Adder + Repave_Adder + Altitude_Adder + CSA_2_clearance
 
-    Neutral_DC = Buffer_Neut + Neutral_CSA_Total
-    CSA_DC = Buffer_Live + CSA_Total
+    Neutral_Design_Clearance = Buffer_Neut + Neutral_CSA_Total
+    CSA_Design_Clearance = Buffer_Live + CSA_Total
 
     #Rounding all the values in the arrays
     CSA_2_neut_clearance = np.round(CSA_2_neut_clearance, Numpy_round_integer)
     Repave_Adder = np.round(Repave_Adder, Numpy_round_integer)
     Snow_Adder = np.round(Snow_Adder, Numpy_round_integer)
     Neutral_CSA_Total = np.round(Neutral_CSA_Total, Numpy_round_integer)
-    Neutral_DC = np.round(Neutral_DC, Numpy_round_integer)
+    Neutral_Design_Clearance = np.round(Neutral_Design_Clearance, Numpy_round_integer)
     CSA_2_clearance = np.round(CSA_2_clearance, Numpy_round_integer)
     Altitude_Adder = np.round(Altitude_Adder, Numpy_round_integer)
     CSA_Total = np.round(CSA_Total, Numpy_round_integer)
-    CSA_DC = np.round(CSA_DC, Numpy_round_integer)
+    CSA_Design_Clearance = np.round(CSA_Design_Clearance, Numpy_round_integer)
 
     #Creating a dictionary that will hold all the values that are outputted
     data = {
@@ -449,13 +435,13 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         'Re-pave Adder (m)': Repave_Adder,
         'Snow Adder (m)': Snow_Adder,
         'Neutral CSA Total (m)': Neutral_CSA_Total,
-        'Neutral Design Clearance (m)': Neutral_DC,
+        'Neutral Design Clearance (m)': Neutral_Design_Clearance,
 
         'Basic (m)': CSA_2_clearance,
         'Altitude Adder (m)': Altitude_Adder,
         #Same Re-pave and Snow adder used as in above
         'CSA Total (m)': CSA_Total,
-        'Design Clearance (m)': CSA_DC,
+        'Design Clearance (m)': CSA_Design_Clearance,
 
         #This will only be used for the excel doc
         'Voltage range': voltage_range,
@@ -504,26 +490,26 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 
     #Calculating the total clearance with adders
     CSA_Total = Altitude_Adder + CSA_3_clearance
-    #DC = Design Clearance
-    Neutral_DC = Buffer_Neut + CSA_3_neut_clearance
-    CSA_DC = Buffer_Live + CSA_Total
+    #Design_Clearance = Design Clearance
+    Neutral_Design_Clearance = Buffer_Neut + CSA_3_neut_clearance
+    CSA_Design_Clearance = Buffer_Live + CSA_Total
 
     #Rounding the
     CSA_3_neut_clearance = np.round(CSA_3_neut_clearance, Numpy_round_integer)
-    Neutral_DC = np.round(Neutral_DC, Numpy_round_integer)
+    Neutral_Design_Clearance = np.round(Neutral_Design_Clearance, Numpy_round_integer)
     CSA_3_clearance = np.round(CSA_3_clearance, Numpy_round_integer)
     Altitude_Adder = np.round(Altitude_Adder, Numpy_round_integer)
     CSA_Total = np.round(CSA_Total, Numpy_round_integer)
-    CSA_DC = np.round(CSA_DC, Numpy_round_integer)
+    CSA_Design_Clearance = np.round(CSA_Design_Clearance, Numpy_round_integer)
 
     data = {
         'Neutral Basic (m)': CSA_3_neut_clearance,
-        'Neutral Design Clearance (m)': Neutral_DC,
+        'Neutral Design Clearance (m)': Neutral_Design_Clearance,
 
         'Basic (m)': CSA_3_clearance,
         'Altitude Adder (m)': Altitude_Adder,
         'CSA Total (m)': CSA_Total,
-        'Design Clearance (m)': CSA_DC,
+        'Design Clearance (m)': CSA_Design_Clearance,
 
         'Voltage range': voltage_range,
         }
@@ -553,17 +539,17 @@ def CSA_Table_5_clearance(p2p_voltage, Buffer_Live):
         CSA_5_clearance = CSA_5['>50kV<90kV']
         Voltage_range = '> 50 ≤ 90'
 
-    #DC = Design Clearance
-    DC = CSA_5_clearance + Buffer_Live
+    #Design_Clearance = Design Clearance
+    Design_Clearance = CSA_5_clearance + Buffer_Live
 
     #Rounding the clearance values
     CSA_5_clearance = np.round(CSA_5_clearance, Numpy_round_integer)
-    DC = np.round(DC, Numpy_round_integer)
+    Design_Clearance = np.round(Design_Clearance, Numpy_round_integer)
 
     #Creating a dictionary to store all the outpt data
     data = {
         'Basic (m)': CSA_5_clearance,
-        'Design Clearance (m)': DC,
+        'Design Clearance (m)': Design_Clearance,
 
         'Voltage range': Voltage_range
         }
@@ -606,31 +592,31 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         CSA_6_clearance = ((voltage - 150) *0.01) + CSA_6_clearance
         Voltage_range = '> 150 kV'
 
-    #DC = Design Clearance
-    DC_neut = CSA_6_neut_clearance + Buffer_Neut
-    DC_sub750 = CSA_6_sub750_clearance + Buffer_Live
-    DC = CSA_6_clearance + Buffer_Live
+    #Design_Clearance = Design Clearance
+    Design_Clearance_neut = CSA_6_neut_clearance + Buffer_Neut
+    Design_Clearance_sub750 = CSA_6_sub750_clearance + Buffer_Live
+    Design_Clearance = CSA_6_clearance + Buffer_Live
 
     #Rounding all the values
     CSA_6_clearance = np.round(CSA_6_clearance, Numpy_round_integer)
     CSA_6_neut_clearance = np.round(CSA_6_neut_clearance, Numpy_round_integer)
     CSA_6_sub750_clearance = np.round(CSA_6_sub750_clearance, Numpy_round_integer)
-    DC = np.round(DC, Numpy_round_integer)
-    DC_neut = np.round(DC_neut, Numpy_round_integer)
-    DC_sub750 = np.round(DC_sub750, Numpy_round_integer)
+    Design_Clearance = np.round(Design_Clearance, Numpy_round_integer)
+    Design_Clearance_neut = np.round(Design_Clearance_neut, Numpy_round_integer)
+    Design_Clearance_sub750 = np.round(Design_Clearance_sub750, Numpy_round_integer)
 
     #Turning the rows into columns for easier display
     Basic_Main_Track = np.array([CSA_6_neut_clearance[0], CSA_6_sub750_clearance[0], CSA_6_clearance[0]])
-    DC_Main_Track = np.array([DC_neut[0], DC_sub750[0], DC[0]])
+    Design_Clearance_Main_Track = np.array([Design_Clearance_neut[0], Design_Clearance_sub750[0], Design_Clearance[0]])
     Basic_Siding = np.array([CSA_6_neut_clearance[1], CSA_6_sub750_clearance[1], CSA_6_clearance[1]])
-    DC_Siding = np.array([DC_neut[1], DC_sub750[1], DC[1]])
+    Design_Clearance_Siding = np.array([Design_Clearance_neut[1], Design_Clearance_sub750[1], Design_Clearance[1]])
 
     #Creating a dictionary to hold outputs
     data = {
         'Main Basic (m)': Basic_Main_Track,
-        'Main Design Clearance (m)': DC_Main_Track,
+        'Main Design Clearance (m)': Design_Clearance_Main_Track,
         'Siding Basic (m)': Basic_Siding,
-        'Siding Design Clearance (m)': DC_Siding,
+        'Siding Design Clearance (m)': Design_Clearance_Siding,
 
         'Voltage range': Voltage_range
         }
@@ -650,15 +636,15 @@ def CSA_Table_7_clearance(Buffer_Live):
 
     #Creating an array to add a design buffer to the basic clearance
     Buffer_Live_array = np.ones(len(CSA_7)) * Buffer_Live
-    CSA7_DC = CSA_7clearance + Buffer_Live_array
+    CSA7_Design_Clearance = CSA_7clearance + Buffer_Live_array
 
     #Rounding
     CSA_7clearance = np.round(CSA_7clearance, Numpy_round_integer)
-    CSA7_DC = np.round(CSA7_DC, Numpy_round_integer)
+    CSA7_Design_Clearance = np.round(CSA7_Design_Clearance, Numpy_round_integer)
 
     data = {
         'Basic (m)': CSA_7clearance,
-        'Design Clearance (m)': CSA7_DC,
+        'Design Clearance (m)': CSA7_Design_Clearance,
         }
     return data
 CSA7_input = {key: inputs[key] for key in ["Buffer_Live"]}
@@ -696,10 +682,10 @@ def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     adder_array = np.array([Buffer_Neut, Buffer_Live, Buffer_Live, Buffer_Live, Buffer_Live, Buffer_Live, Buffer_Live])
 
     #Adding the adder to get design clearance values
-    DC_build_hor = CSA_9_build_hor + adder_array
-    DC_build__vert = CSA_9_build__vert + adder_array
-    DC_obs_hor = CSA_9_obs_hor + adder_array
-    DC_obs_vert = CSA_9_obs_vert + adder_array
+    Design_Clearance_build_hor = CSA_9_build_hor + adder_array
+    Design_Clearance_build__vert = CSA_9_build__vert + adder_array
+    Design_Clearance_obs_hor = CSA_9_obs_hor + adder_array
+    Design_Clearance_obs_vert = CSA_9_obs_vert + adder_array
 
     #Rounding the values
     CSA_9_build_hor = np.round(CSA_9_build_hor, Numpy_round_integer)
@@ -707,10 +693,10 @@ def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     CSA_9_obs_hor = np.round(CSA_9_obs_hor, Numpy_round_integer)
     CSA_9_obs_vert = np.round(CSA_9_obs_vert, Numpy_round_integer)
 
-    DC_build_hor = np.round(DC_build_hor, Numpy_round_integer)
-    DC_build__vert = np.round(DC_build__vert, Numpy_round_integer)
-    DC_obs_hor = np.round(DC_obs_hor, Numpy_round_integer)
-    DC_obs_vert = np.round(DC_obs_vert, Numpy_round_integer)
+    Design_Clearance_build_hor = np.round(Design_Clearance_build_hor, Numpy_round_integer)
+    Design_Clearance_build__vert = np.round(Design_Clearance_build__vert, Numpy_round_integer)
+    Design_Clearance_obs_hor = np.round(Design_Clearance_obs_hor, Numpy_round_integer)
+    Design_Clearance_obs_vert = np.round(Design_Clearance_obs_vert, Numpy_round_integer)
 
     #Creating a dictionary that will have the exports from the table
     data = {
@@ -719,10 +705,10 @@ def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         'Obstacles basic horizontal': CSA_9_obs_hor,
         'Obstacles basic vertical': CSA_9_obs_vert,
 
-        'Buildings Design Clearance Horizontal': DC_build_hor,
-        'Buildings Design Clearance vertical': DC_build__vert,
-        'Obstacles Design Clearance Horizontal': DC_obs_hor,
-        'Obstacles Design Clearance vertical': DC_obs_vert,
+        'Buildings Design Clearance Horizontal': Design_Clearance_build_hor,
+        'Buildings Design Clearance vertical': Design_Clearance_build__vert,
+        'Obstacles Design Clearance Horizontal': Design_Clearance_obs_hor,
+        'Obstacles Design Clearance vertical': Design_Clearance_obs_vert,
         }
     return data
 CSA9_input = {key: inputs[key] for key in ['p2p_voltage',"Buffer_Neut", "Buffer_Live"]}
@@ -772,15 +758,15 @@ def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles):
         voltage_adder = 0
 
     #Clearance adder must be added on after the voltage adder
-    DC_CSA10_clearance = CSA_10_clearance + clearance_adder
+    Design_Clearance_CSA10_clearance = CSA_10_clearance + clearance_adder
 
     #The following is to round all the values before they are sent to the table
     CSA_10_clearance = np.round(CSA_10_clearance, Numpy_round_integer)
-    DC_CSA10_clearance = np.round(DC_CSA10_clearance, Numpy_round_integer)
+    Design_Clearance_CSA10_clearance = np.round(Design_Clearance_CSA10_clearance, Numpy_round_integer)
 
-    # The next to lines of code is to sort the two arrays into a format that goes: basic, DC, basic, DC ...etc
+    # The next to lines of code is to sort the two arrays into a format that goes: basic, Design_Clearance, basic, Design_Clearance ...etc
     # Stack the two 1D arrays vertically
-    stacked_arrays = np.vstack((CSA_10_clearance, DC_CSA10_clearance))
+    stacked_arrays = np.vstack((CSA_10_clearance, Design_Clearance_CSA10_clearance))
     # Flatten the resulting 2D array into a 1D array
     CSA10output = np.ravel(stacked_arrays, order='F')
 
@@ -809,12 +795,12 @@ def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 
     #Supply Equipment values
     CSA11_SupplyEquipment = CSA_11.loc['Supply equipment'][0]
-    CSA11_SupplyEquipment_DC = CSA11_SupplyEquipment + Buffer_Live
+    CSA11_SupplyEquipment_Design_Clearance = CSA11_SupplyEquipment + Buffer_Live
     CSA11_SupplyEquipmentB = CSA_11.loc['Supply equipment'][1]
 
     #Neutral
     CSA11_neut_clearance = CSA_11.loc['Guys, messengers, span wires, communication circuits, secondary cable 0–750 V, and multi-grounded neutral conductors'][0]
-    CSA11_neut_clearance_DC = CSA11_neut_clearance + Buffer_Neut
+    CSA11_neut_clearance_Design_Clearance = CSA11_neut_clearance + Buffer_Neut
     CSA11_neut_clearanceB = CSA_11.loc['Guys, messengers, span wires, communication circuits, secondary cable 0–750 V, and multi-grounded neutral conductors'][1]
 
     if  0 < voltage <= 0.75: 
@@ -839,27 +825,27 @@ def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         Voltage_range = '> 150'
 
     #Creating an array to add a design buffer to the basic clearance
-    CSA11_DC = CSA11_clearance + Buffer_Live
+    CSA11_Design_Clearance = CSA11_clearance + Buffer_Live
 
     #Rounding
     CSA11_SupplyEquipment = np.round(CSA11_SupplyEquipment, Numpy_round_integer)
-    CSA11_SupplyEquipment_DC = np.round(CSA11_SupplyEquipment_DC, Numpy_round_integer)
+    CSA11_SupplyEquipment_Design_Clearance = np.round(CSA11_SupplyEquipment_Design_Clearance, Numpy_round_integer)
 
     CSA11_neut_clearance = np.round(CSA11_neut_clearance, Numpy_round_integer)
-    CSA11_neut_clearance_DC = np.round(CSA11_neut_clearance_DC, Numpy_round_integer)
+    CSA11_neut_clearance_Design_Clearance = np.round(CSA11_neut_clearance_Design_Clearance, Numpy_round_integer)
 
     CSA11_clearance = np.round(CSA11_clearance, Numpy_round_integer)
-    CSA11_DC = np.round(CSA11_DC, Numpy_round_integer)
+    CSA11_Design_Clearance = np.round(CSA11_Design_Clearance, Numpy_round_integer)
 
     #Creating the 3 columns that are needed to be outputted to form the dictionary output
     CSA11_A = np.array([CSA11_SupplyEquipment, CSA11_neut_clearance, CSA11_clearance])
-    CSA11_A_DC = np.array([CSA11_SupplyEquipment_DC, CSA11_neut_clearance_DC, CSA11_DC])
+    CSA11_A_Design_Clearance = np.array([CSA11_SupplyEquipment_Design_Clearance, CSA11_neut_clearance_Design_Clearance, CSA11_Design_Clearance])
     CSA11_B = np.array([CSA11_SupplyEquipmentB, CSA11_neut_clearanceB, CSA11_clearanceB])
 
 
     data = {
         'Basic': CSA11_A,
-        'Design Clearance': CSA11_A_DC,
+        'Design Clearance': CSA11_A_Design_Clearance,
         'B-Measured Vertically Over Land': CSA11_B,
 
         'Voltage range': Voltage_range,
@@ -948,16 +934,16 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     #Creating an array to add a design buffer to the basic clearance
     buffer_array = Design_buffer_2_obstacles * np.ones(len(CAS13_guy_basic))
 
-    #Adding the design buffer to get design clearance (DC)
-    CSA13_from_guy_DC = CAS13_guy_basic + buffer_array
-    CSA13_from_ac_DC = CAS13_ac_basic + buffer_array
+    #Adding the design buffer to get design clearance (Design_Clearance)
+    CSA13_from_guy_Design_Clearance = CAS13_guy_basic + buffer_array
+    CSA13_from_ac_Design_Clearance = CAS13_ac_basic + buffer_array
 
     #Rounding
     CAS13_guy_basic = np.round(CAS13_guy_basic, Numpy_round_integer)
     CAS13_ac_basic = np.round(CAS13_ac_basic, Numpy_round_integer)
 
-    CSA13_from_guy_DC = np.round(CSA13_from_guy_DC, Numpy_round_integer)
-    CSA13_from_ac_DC = np.round(CSA13_from_ac_DC, Numpy_round_integer)
+    CSA13_from_guy_Design_Clearance = np.round(CSA13_from_guy_Design_Clearance, Numpy_round_integer)
+    CSA13_from_ac_Design_Clearance = np.round(CSA13_from_ac_Design_Clearance, Numpy_round_integer)
 
     XING_voltage = np.round(XING_voltage, Numpy_round_integer)
     voltage = np.round(voltage, Numpy_round_integer)
@@ -966,20 +952,20 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     if np.isnan(CAS13_guy_basic[2]):
         CAS13_guy_basic[2] = "-"
 
-    if np.isnan(CSA13_from_guy_DC[2]):
-        CSA13_from_guy_DC[2] = "-"
+    if np.isnan(CSA13_from_guy_Design_Clearance[2]):
+        CSA13_from_guy_Design_Clearance[2] = "-"
 
     if np.isnan(CAS13_ac_basic[2]):
         CAS13_ac_basic[2] = "-"
 
-    if np.isnan(CSA13_from_ac_DC[2]):
-        CSA13_from_ac_DC[2] = "-"
+    if np.isnan(CSA13_from_ac_Design_Clearance[2]):
+        CSA13_from_ac_Design_Clearance[2] = "-"
 
     data = {
         'Basic guy': CAS13_guy_basic,
-        'Design Clearance guy': CSA13_from_guy_DC,
+        'Design Clearance guy': CSA13_from_guy_Design_Clearance,
         'Basic ac': CAS13_ac_basic,
-        'Design Clearance ac': CSA13_from_ac_DC,
+        'Design Clearance ac': CSA13_from_ac_Design_Clearance,
 
         'Voltage range': voltage_range_over,
         'Voltage range XING': voltage_range_XING,
@@ -1035,22 +1021,22 @@ def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles):
     #Creating an array to add a design buffer to the basic clearance
     buffer_array = Design_buffer_2_obstacles * np.ones(len(CSA14_clearance))
 
-    #Adding the design buffer to get design clearance (DC)
-    CSA14_DC = CSA14_clearance + buffer_array
-    CSA14_neut_DC = CSA_14_neut_clearance + buffer_array
+    #Adding the design buffer to get design clearance (Design_Clearance)
+    CSA14_Design_Clearance = CSA14_clearance + buffer_array
+    CSA14_neut_Design_Clearance = CSA_14_neut_clearance + buffer_array
 
     #Rounding
     CSA14_clearance = np.round(CSA14_clearance, Numpy_round_integer)
     CSA_14_neut_clearance = np.round(CSA_14_neut_clearance, Numpy_round_integer)
 
-    CSA14_DC = np.round(CSA14_DC, Numpy_round_integer)
-    CSA14_neut_DC = np.round(CSA14_neut_DC, Numpy_round_integer)
+    CSA14_Design_Clearance = np.round(CSA14_Design_Clearance, Numpy_round_integer)
+    CSA14_neut_Design_Clearance = np.round(CSA14_neut_Design_Clearance, Numpy_round_integer)
 
     data = {
         'Basic guy': CSA_14_neut_clearance,
-        'Design Clearance guy': CSA14_neut_DC,
+        'Design Clearance guy': CSA14_neut_Design_Clearance,
         'Basic': CSA14_clearance,
-        'Design Clearance': CSA14_DC,
+        'Design Clearance': CSA14_Design_Clearance,
 
         'Voltage range': voltage_range,
         }
@@ -1060,13 +1046,15 @@ CSA14_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obst
 CSA_Table14_data = CSA_Table_14_clearance(**CSA14_input)
 
 #The following function is for CSA Table 15
-#
-#   NOT TOO SURE HOW THE COMMS CLERANCE FOR THIS WORKS ON THE SPREADSHEET
-#
-def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles):
+def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Voltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    voltage_XING = XING_P2P_Voltage / np.sqrt(3)
+
+    comms_voltage = voltage + 0.130
+    voltage = voltage + voltage_XING
+    
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_15 = pd.read_excel(ref_table, "CSA table 15")
@@ -1080,42 +1068,47 @@ def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles):
     if  0 < voltage <= 0.75: 
         voltage_range = '0 – 750 V'
         CSA15_clearance = CSA_15.loc['0-750V']
-        CSA15_Comms = CSA_15.loc['> 750 V dc (300 + 6 mm/kV over 750)']
     else: 
         voltage_range = '> 750 V'
         CSA15_clearance = CSA_15.loc['> 750 V ac (300 + 10 mm/kV over 750)']
         CSA15_clearance = CSA15_clearance + np.ones(len(CSA15_clearance)) * 10 * (voltage - 0.75)
 
-        CSA15_Comms = CSA_15.loc['> 750 V dc (300 + 6 mm/kV over 750)']
+        #Figuring out the correct row name
+    if  0 < comms_voltage <= 0.75: 
+        voltage_range = '0 – 750 V'
+        CSA15_Comms = CSA_15.loc['0-750V']
+    else: 
+        voltage_range = '> 750 V'
+        CSA15_Comms = CSA_15.loc['> 750 V ac (300 + 10 mm/kV over 750)']
         CSA15_Comms = CSA15_Comms + np.ones(len(CSA15_Comms)) * 6 * (voltage - 0.75)
 
     #Creating an array to add a design buffer to the basic clearance
     #Adding factor of 1000 to turn meters into mm
     buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA15_clearance))
 
-    #Adding the design buffer to get design clearance (DC)
-    CSA15_DC = CSA15_clearance + buffer_array
-    CSA15_Comms_DC = CSA15_Comms + buffer_array
+    #Adding the design buffer to get design clearance
+    CSA15_Design_Clearance = CSA15_clearance + buffer_array
+    CSA15_Comms_Design_Clearance = CSA15_Comms + buffer_array
 
     #Rounding
     CSA15_clearance = np.round(CSA15_clearance, Numpy_round_integer)
     CSA15_Comms = np.round(CSA15_Comms, Numpy_round_integer)
 
-    CSA15_DC = np.round(CSA15_DC, Numpy_round_integer)
-    CSA15_Comms_DC = np.round(CSA15_Comms_DC, Numpy_round_integer)
+    CSA15_Design_Clearance = np.round(CSA15_Design_Clearance, Numpy_round_integer)
+    CSA15_Comms_Design_Clearance = np.round(CSA15_Comms_Design_Clearance, Numpy_round_integer)
 
     #Creating the arrays that will be the columns in the spreadsheet, the position has to be specified since these are arrays of len (1) o/w would give brackets around values in table
     Basic_clearance_array = np.array([CSA15_clearance[0], CSA15_Comms[0]])
-    Basic_clearance_DC = np.array([CSA15_DC[0], CSA15_Comms_DC[0]])
+    Basic_clearance_Design_Clearance = np.array([CSA15_Design_Clearance[0], CSA15_Comms_Design_Clearance[0]])
 
     data = {
         'Basic': Basic_clearance_array,
-        'DC': Basic_clearance_DC,
+        'Design_Clearance': Basic_clearance_Design_Clearance,
 
         'Voltage range': voltage_range,
         }
     return data
-CSA15_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
+CSA15_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'XING_P2P_Voltage']}
 CSA_Table15_data = CSA_Table_15_clearance(**CSA15_input)
 
 #The following function is for CSA Table 16
@@ -1133,7 +1126,7 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
 
     #Collecting clearance for neutral and adding a design clearance buffer
     CSA16_clearance_neut = CSA_16.loc['0-5 (1000 where practicable, but in no case less than. a)150 for spans 0-6m b)230 for spans >6 and < 15m c)300 for spans >15m']
-    CSA16_clearance_neut_DC = CSA16_clearance_neut + np.ones(len(CSA16_clearance_neut)) * Design_buffer_2_obstacles
+    CSA16_clearance_neut_Design_Clearance = CSA16_clearance_neut + np.ones(len(CSA16_clearance_neut)) * Design_buffer_2_obstacles
     text_neut = ' where practicable, but in no case less than. \n a)150 for spans 0-6m \n b)230 for spans >6 and < 15m \n c)300 for spans >15m'
 
     #Figuring out the correct row name
@@ -1143,7 +1136,7 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
         CSA16_clearance = CSA_16.loc['0-5 (1000 where practicable, but in no case less than. a)150 for spans 0-6m b)230 for spans >6 and < 15m c)300 for spans >15m']
         #Creating design buffer array to add onto clearance
         buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
-        CSA16_DC = CSA16_clearance + buffer_array
+        CSA16_Design_Clearance = CSA16_clearance + buffer_array
         #Adding text that appears with this in CSA table
         text = ' where practicable, but in no case less than. \n a)150 for spans 0-6m \n b)230 for spans >6 and < 15m \n c)300 for spans >15m'
     elif voltage <= 22:
@@ -1152,7 +1145,7 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
         CSA16_clearance = CSA_16.loc['> 5 < 22 (1000 wherever practicable, but in no case less than 500)']
         #Creating design buffer array to add onto clearance
         buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
-        CSA16_DC = CSA16_clearance + buffer_array
+        CSA16_Design_Clearance = CSA16_clearance + buffer_array
         #Adding text that appears with this in CSA table
         text = ' where practicable, but in no case less than 500'
     elif voltage <= 50:
@@ -1161,7 +1154,7 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
         CSA16_clearance = CSA_16.loc['>22 < 50']
         #Creating design buffer array to add onto clearance
         buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
-        CSA16_DC = CSA16_clearance + buffer_array
+        CSA16_Design_Clearance = CSA16_clearance + buffer_array
         #Adding text that appears with this in CSA table (Not text in this case but kept in order to satisfy a statement later)
         text = ''
     else: 
@@ -1172,24 +1165,24 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
         CSA16_clearance = CSA16_clearance + np.ones(len(CSA16_clearance)) * (voltage-50) * 10
         #Creating design buffer array to add onto clearance
         buffer_array = Design_buffer_2_obstacles * float(1000) * np.ones(len(CSA16_clearance))
-        CSA16_DC = CSA16_clearance + buffer_array
+        CSA16_Design_Clearance = CSA16_clearance + buffer_array
         #Adding text that appears with this in CSA table
         text = ''
 
     #Rounding
     CSA16_clearance = np.round(CSA16_clearance, Numpy_round_integer)
-    CSA16_DC = np.round(CSA16_DC, Numpy_round_integer)
+    CSA16_Design_Clearance = np.round(CSA16_Design_Clearance, Numpy_round_integer)
 
     Basic_annotated = str(CSA16_clearance[0]) + text
     Basic_neut_annotated = str(CSA16_clearance_neut[0]) + text_neut
 
     #Creating the arrays that will be shown in the columns of the spreadsheet
     Basic = np.array([Basic_annotated, Basic_neut_annotated])
-    DC = np.array([float(CSA16_DC), float(CSA16_clearance_neut_DC)])
+    Design_Clearance = np.array([float(CSA16_Design_Clearance), float(CSA16_clearance_neut_Design_Clearance)])
 
     data = {
         'Basic': Basic,
-        'DC': DC,
+        'Design_Clearance': Design_Clearance,
 
         'Voltage range': voltage_range,
         }
@@ -1218,9 +1211,9 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         Span_Range = '0-6 m'
         CSA17_clearance = CSA_17.loc['0-5 kV ac 0 - 6 m'][0]
         #Creating design buffer array to add onto clearance
-        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
         CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
 
     elif 0 < voltage <= 5 and Span_Length <= 50: 
         #Voltage range and span length range to print on the spreadsheet
@@ -1228,9 +1221,9 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         Span_Range = '> 6 < 50 m'
         CSA17_clearance = CSA_17.loc['0-5 kV ac > 6 < 50 m'][0]
         #Creating design buffer array to add onto clearance
-        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
         CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
 
     elif 0 < voltage <= 5 and Span_Length > 50 : 
         #Voltage range and span length range to print on the spreadsheet
@@ -1239,9 +1232,9 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA_17.loc['0-5 kV ac  > 50 < 450 m a )3 x the distance (in m) by which the span length exceeds 50 m; b)83 x the final unloaded sag (in m) at 15C conductor temperature for conductor(s) having the greatest sag; and c)10 mm/kV over 5 kV.'][0]
         CSA17_clearance = CSA17_clearance + (3*(Span_Length - 50)) + (83*(Final_Unloaded_Sag_15C))
         #Creating design buffer array to add onto clearance
-        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
         CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
 
     elif voltage > 5 and Span_Length <= 50: 
         #Voltage range and span length range to print on the spreadsheet
@@ -1250,9 +1243,9 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA_17.loc['> 5kV ac < 50 m + 10 mm/kV over 1kV'][0]
         CSA17_clearance = CSA17_clearance + 10 * (voltage - 1)
         #Creating design buffer array to add onto clearance
-        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
         CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
 
     elif voltage > 5 and Span_Length <= 450: 
         #Voltage range and span length range to print on the spreadsheet
@@ -1261,9 +1254,9 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA_17.loc['> 5kV ac > 50 < 450 m a )3 x the distance (in m) by which the span length exceeds 50 m; b)83 x the final unloaded sag (in m) at 15C conductor temperature for conductor(s) having the greatest sag; and c)10 mm/kV over 5 kV.'][0]
         CSA17_clearance = CSA17_clearance + (3*(Span_Length - 50)) + (83*(Final_Unloaded_Sag_15C)) + (10*(voltage-5))
         #Creating design buffer array to add onto clearance
-        CSA17_DC = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
+        CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
         CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_DC = np.round(CSA17_DC, Numpy_round_integer)
+        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
 
     else:
         #Voltage range and span length range to print on the spreadsheet
@@ -1271,13 +1264,13 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         Span_Range = '> 50 < 450 m'
         CSA17_clearance = 'For spans longer than 450 m, the separation shall be based on best engineering practices, but shall be not less than the separations specified for spans of 450 m.'
         #Creating design buffer array to add onto clearance
-        CSA17_DC = 'For spans longer than 450 m, the separation shall be based on best engineering practices, but shall be not less than the separations specified for spans of 450 m.'
+        CSA17_Design_Clearance = 'For spans longer than 450 m, the separation shall be based on best engineering practices, but shall be not less than the separations specified for spans of 450 m.'
 
 
     #Creating the arrays that will be shown in the columns of the spreadsheet
     data = {
         'Basic': CSA17_clearance,
-        'DC': CSA17_DC,
+        'Design_Clearance': CSA17_Design_Clearance,
 
         'Voltage range': voltage_range,
         'Span Range': Span_Range
@@ -1287,19 +1280,22 @@ CSA17_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obst
 CSA_Table17_data = CSA_Table_17_clearance(**CSA17_input)
 
 #The following function is for CSA Table 18
-#
-#  Need to add upper lower wire toggle
-#
-def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage):
+def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage, Is_main_wire_upper):
 
-    #Getting Phase to ground voltage
-    voltage = p2p_voltage / np.sqrt(3)
-    XING_voltage = XING_P2P_Voltage / np.sqrt(3)
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_18 = pd.read_excel(ref_table, "CSA table 18")
 
     #Index being set so that row can be found using name
     CSA_18.set_index("Conductors at lower level", inplace = True)
+
+    if Is_main_wire_upper == True:
+        #Getting Phase to ground voltage if main wire is upper wire
+        voltage = p2p_voltage / np.sqrt(3)
+        under_voltage = XING_P2P_Voltage / np.sqrt(3)
+    else:
+        #Getting Phase to ground voltage if main wire is lower wire
+        under_voltage = p2p_voltage / np.sqrt(3)
+        voltage = XING_P2P_Voltage / np.sqrt(3)
 
     #From the way this table works a specfific cell must be selected using row and column the following if else statements will pick the proper row and column
 
@@ -1318,47 +1314,54 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
         voltage_range_over = 'AC < 120 ≤ 150'
 
     #Figuring out the correct column name
-    if  0 < XING_voltage <= 0.75: 
+    if  0 < under_voltage <= 0.75: 
          voltage_range_lower = 'AC 0-750 V'
-    elif XING_voltage <=5: 
+    elif under_voltage <=5: 
         voltage_range_lower = 'AC > 0.75 ≤ 5'
-    elif XING_voltage <=22: 
+    elif under_voltage <=22: 
         voltage_range_lower = 'AC > 5 ≤ 22'
-    elif XING_voltage <=50: 
+    elif under_voltage <=50: 
         voltage_range_lower = 'AC > 22 ≤ 50'
-    elif XING_voltage <=90: 
+    elif under_voltage <=90: 
         voltage_range_lower = 'AC > 50 ≤ 90'
     else: 
         voltage_range_lower = 'AC < 120 ≤ 150'
 
     #Clearance values
     CSA18_clearance = CSA_18.at[ voltage_range_lower , voltage_range_over ]
-    CSA18_DC = float(CSA18_clearance) + Design_Buffer_Same_Structure
 
-    #Rounding
-    CSA18_clearance = np.round(CSA18_clearance, Numpy_round_integer)
-    CSA18_DC = np.round(CSA18_DC, Numpy_round_integer)
+    #Creating array for design clearance
+    CSA18_Design_Clearance = []
 
-    #Specific symbols for certain cells
-    if voltage_range_lower == voltage_range_over and voltage > 5:
-        CSA18_DC = str(CSA18_DC) + "†"
-        CSA18_clearance = str(CSA18_clearance) + "†"
+    #Figuring out if the number has any symbols attached to it
+    #If there are symbols they will be removed so addition can be done and then added back in
+    if isinstance(CSA18_clearance, int):
+        CSA18_clearance = np.round(CSA18_clearance, Numpy_round_integer)
+        CSA18_Design_Clearance = CSA18_clearance + Design_Buffer_Same_Structure
+    elif isinstance(CSA18_clearance, float):
+        CSA18_clearance = np.round(CSA18_clearance, Numpy_round_integer)
+        CSA18_Design_Clearance = CSA18_clearance + Design_Buffer_Same_Structure
+    elif isinstance(CSA18_clearance, str):
+        num = float(CSA18_clearance.rstrip('*†‡'))
+        num = np.round(num, Numpy_round_integer)
+        CSA18_Design_Clearance = f"{num + Design_Buffer_Same_Structure}{CSA18_clearance[len(str(int(num))):]}"
+        CSA18_clearance = f'{num}{CSA18_clearance[len(str(int(num))):]}'
 
     #Error message incase the voltage below is highe rthan the one above
     if voltage_range_lower > voltage_range_over:
         CSA18_clearance = "Error higher voltage below lower voltage"
-        CSA18_DC = "Error higher voltage below lower voltage"
+        CSA18_Design_Clearance = "Error higher voltage below lower voltage"
 
     data = {
         'Basic': CSA18_clearance,
-        'Design Clearance': CSA18_DC,
+        'Design Clearance': CSA18_Design_Clearance,
 
         'Voltage range': voltage_range_over,
         'Voltage range under': voltage_range_lower,
         }
     
     return data
-CSA18_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage"]}
+CSA18_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage", 'Is_main_wire_upper']}
 CSA_Table18_data = CSA_Table_18_clearance(**CSA18_input)
 
 #The following function is for CSA Table 20
@@ -1397,14 +1400,14 @@ def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         CSA20_clearance = CSA_20.loc['90 kV']
         voltage_range = '90'
 
-    CSA20_DC = CSA20_clearance + np.ones(len(CSA20_clearance)) * Design_Buffer_Same_Structure * 1000
+    CSA20_Design_Clearance = CSA20_clearance + np.ones(len(CSA20_clearance)) * Design_Buffer_Same_Structure * 1000
     #Creating the arrays that will be shown in the columns of the spreadsheet
     data = {
         'Basic': CSA20_clearance[0],
-        'DC': CSA20_DC[0],
+        'Design_Clearance': CSA20_Design_Clearance[0],
 
         'Between conductors': CSA20_clearance[1],
-        'Between conductors DC': CSA20_DC[1],
+        'Between conductors Design_Clearance': CSA20_Design_Clearance[1],
 
         'Voltage range': voltage_range
         }
@@ -1413,20 +1416,22 @@ CSA20_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_S
 CSA_Table20_data = CSA_Table_20_clearance(**CSA20_input)
 
 #The following function is for CSA Table 21
-#
-#  Need to add upper lower wire toggle
-#
-def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage):
-
-    #Getting Phase to ground voltage
-    voltage = p2p_voltage / np.sqrt(3)
-    XING_voltage = XING_P2P_Voltage / np.sqrt(3)
+def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage, Is_main_wire_upper):
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_21 = pd.read_excel(ref_table, "CSA table 21")
 
     #Index being set so that row can be found using name
     CSA_21.set_index("Maximum lower conductor line-to-ground voltage, kV", inplace = True)
+
+    if Is_main_wire_upper == True:
+        #Getting Phase to ground voltage if main wire is upper wire
+        voltage = p2p_voltage / np.sqrt(3)
+        under_voltage = XING_P2P_Voltage / np.sqrt(3)
+    else:
+        #Getting Phase to ground voltage if main wire is lower wire
+        under_voltage = p2p_voltage / np.sqrt(3)
+        voltage = XING_P2P_Voltage / np.sqrt(3)
 
     #From the way this table works a specfific cell must be selected using row and column the following if else statements will pick the proper row and column
 
@@ -1447,46 +1452,46 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
         voltage_range_over = '90 kv'
 
     #Figuring out the correct column name
-    if  0 < XING_voltage <= 0.75: 
+    if  0 < under_voltage <= 0.75: 
          voltage_range_lower = '0.75 kv'
-    elif XING_voltage <=5: 
+    elif under_voltage <=5: 
         voltage_range_lower = '5 kv'
-    elif XING_voltage <=10: 
+    elif under_voltage <=10: 
         voltage_range_lower = '10 kv'
-    elif XING_voltage <=17: 
+    elif under_voltage <=17: 
         voltage_range_lower = '17 kv'
-    elif XING_voltage <=22: 
+    elif under_voltage <=22: 
         voltage_range_lower = '22 kv'
-    elif XING_voltage <=30: 
+    elif under_voltage <=30: 
         voltage_range_lower = '30 kv'
-    elif XING_voltage <=50: 
+    elif under_voltage <=50: 
         voltage_range_lower = '50 kv'
     else: 
         voltage_range_lower = '90 kv'
 
     #Clearance values
     CSA21_clearance = CSA_21.at[ voltage_range_lower , voltage_range_over ]
-    CSA21_DC = float(CSA21_clearance) + Design_Buffer_Same_Structure
+    CSA21_Design_Clearance = float(CSA21_clearance) + Design_Buffer_Same_Structure
 
     #Rounding
     CSA21_clearance = np.round(CSA21_clearance, Numpy_round_integer)
-    CSA21_DC = np.round(CSA21_DC, Numpy_round_integer)
+    CSA21_Design_Clearance = np.round(CSA21_Design_Clearance, Numpy_round_integer)
 
     #Error message incase the voltage below is highe rthan the one above
     if voltage_range_lower > voltage_range_over:
         CSA21_clearance = "Error higher voltage below lower voltage"
-        CSA21_DC = "Error higher voltage below lower voltage"
+        CSA21_Design_Clearance = "Error higher voltage below lower voltage"
 
     data = {
         'Basic': CSA21_clearance,
-        'Design Clearance': CSA21_DC,
+        'Design Clearance': CSA21_Design_Clearance,
 
         'Voltage range': voltage_range_over,
         'Voltage range under': voltage_range_lower,
         }
     
     return data
-CSA21_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage"]}
+CSA21_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage", 'Is_main_wire_upper']}
 CSA_Table21_data = CSA_Table_21_clearance(**CSA21_input)
 
 #The following function is for CSA Table 22
@@ -1548,7 +1553,7 @@ def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 
     data = {
         'Basic': CSA22_clearance,
-        'DC': CSA_22_Design_Clearance,
+        'Design_Clearance': CSA_22_Design_Clearance,
 
         'Voltage range': voltage_range
         }
@@ -1647,7 +1652,7 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 
     data = {
         'Basic': CSA23_clearance_basic,
-        'DC': CSA_23_Design_Clearance,
+        'Design_Clearance': CSA_23_Design_Clearance,
 
         'Voltage range': voltage_range
         }
@@ -1698,7 +1703,7 @@ def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 
     data = {
         'Basic': CSA24_clearance,
-        'DC': CSA_24_Design_Clearance,
+        'Design_Clearance': CSA_24_Design_Clearance,
 
         'Voltage range': voltage_range
         }
@@ -1739,7 +1744,7 @@ def CSA_Table_25_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 
     data = {
         'Basic': Basic_clearances,
-        'DC': Design_clearances,
+        'Design_Clearance': Design_clearances,
 
 
         'Voltage range': voltage_range
@@ -1851,7 +1856,6 @@ def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure):
     return data
 CSA26_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
 CSA_Table26_data = CSA_Table_26_clearance(**CSA26_input)
-
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -2774,7 +2778,7 @@ def create_report_excel():
     
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(2):
-        row = [CSA15_titles[i],  CSA_Table15_data['Basic'][i], CSA_Table15_data['DC'][i]]
+        row = [CSA15_titles[i],  CSA_Table15_data['Basic'][i], CSA_Table15_data['Design_Clearance'][i]]
         CSA15.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -2805,7 +2809,7 @@ def create_report_excel():
     }
 
     # define some footer notes
-    footer_CSA15 = ['* Communication conductors are assumed to operate at less than 130 V dc at 0.25 A or less per pair (1500 pairs or fewer).', 'Voltages are rms line-to-ground.']
+    footer_CSA15 = ['* Communication conductors are assumed to operate at less than 130 V Design_Clearance at 0.25 A or less per pair (1500 pairs or fewer).', 'Voltages are rms line-to-ground.']
 
     # define the worksheet
     CSA_Table_15 = {
@@ -2841,7 +2845,7 @@ def create_report_excel():
     
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(2):
-        row = [CSA16_titles[i],  CSA_Table16_data['Basic'][i], CSA_Table16_data['DC'][i]]
+        row = [CSA16_titles[i],  CSA_Table16_data['Basic'][i], CSA_Table16_data['Design_Clearance'][i]]
         CSA16.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -2872,7 +2876,7 @@ def create_report_excel():
     }
 
     # define some footer notes
-    footer_CSA16 = ['* Communication conductors are assumed to operate at less than 130 V dc at 0.25 A or less per pair (1500 pairs or fewer).', 'Voltages are rms line-to-ground.', 'Spans are assumed to be greater than 15m.', 'For line voltages (line to ground) between 0 and 22 kV, clearance of 1 m shall be met wherever practical, but see CSA C22.3 No.1 for details on allowed reductions if necessary.']
+    footer_CSA16 = ['* Communication conductors are assumed to operate at less than 130 V Design_Clearance at 0.25 A or less per pair (1500 pairs or fewer).', 'Voltages are rms line-to-ground.', 'Spans are assumed to be greater than 15m.', 'For line voltages (line to ground) between 0 and 22 kV, clearance of 1 m shall be met wherever practical, but see CSA C22.3 No.1 for details on allowed reductions if necessary.']
 
     # define the worksheet
     CSA_Table_16 = {
@@ -2903,7 +2907,7 @@ def create_report_excel():
         ['Line conductor', 'Minimum horizontal separation of conductors for spans mm'],
         [' ', 'span ' + str(span_range)],
         [' ', 'Basic', 'Design Clearance'],
-        [CSA17_cell00 ,  CSA_Table17_data['Basic'], CSA_Table17_data['DC']]
+        [CSA17_cell00 ,  CSA_Table17_data['Basic'], CSA_Table17_data['Design_Clearance']]
             ]
     
 
@@ -3031,7 +3035,7 @@ def create_report_excel():
         ['Maximum circuit line-to-ground voltage, kV', 'Minimum clearance, mm'],
         [' ', 'Between multi-grounded neutral and circuit conductor', ' ', 'Between circuit conductors'],
         [' ', 'Basic', 'Design Clearance', 'Basic', 'Design Clearance'],
-        [CSA20_cell00 ,  CSA_Table20_data['Basic'], CSA_Table20_data['DC'],  CSA_Table20_data['Between conductors'], CSA_Table20_data['Between conductors DC']]
+        [CSA20_cell00 ,  CSA_Table20_data['Basic'], CSA_Table20_data['Design_Clearance'],  CSA_Table20_data['Between conductors'], CSA_Table20_data['Between conductors Design_Clearance']]
             ]
     
 
@@ -3168,7 +3172,7 @@ def create_report_excel():
     
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(4):
-        row = [CSA22titles[i],  CSA_Table22_data['Basic'][i], CSA_Table22_data['DC'][i]]
+        row = [CSA22titles[i],  CSA_Table22_data['Basic'][i], CSA_Table22_data['Design_Clearance'][i]]
         CSA22.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -3278,7 +3282,7 @@ def create_report_excel():
     
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(10):
-        row = [CSA23titles[i], CSA23_1in[i], CSA23_2in[i], CSA_Table23_data['Basic'][i], CSA_Table23_data['DC'][i]]
+        row = [CSA23titles[i], CSA23_1in[i], CSA23_2in[i], CSA_Table23_data['Basic'][i], CSA_Table23_data['Design_Clearance'][i]]
         CSA23.append(row)
 
     #This is retrieving the number of rows in each table array
@@ -3342,7 +3346,7 @@ def create_report_excel():
         [' '],
         ['Voltage of supply conductor','Minimum clearance of supply conductor above line of sight of points of support of highest communication wire or cable, mm'],
         [' ', 'Basic', 'Design Clearance'],
-        [str(voltage_range), CSA_Table24_data['Basic'], CSA_Table24_data['DC']]
+        [str(voltage_range), CSA_Table24_data['Basic'], CSA_Table24_data['Design_Clearance']]
             ])
 
     #This is retrieving the number of rows in each table array
@@ -3415,7 +3419,7 @@ def create_report_excel():
     
     #The following will fill out the rest of the table with numbers in their respective problems
     for i in range(3):
-        row = [CSA25titles[i], CSA_Table25_data['Basic'][i], CSA_Table25_data['DC'][i]]
+        row = [CSA25titles[i], CSA_Table25_data['Basic'][i], CSA_Table25_data['Design_Clearance'][i]]
         CSA25.append(row)
 
     #This is retrieving the number of rows in each table array
