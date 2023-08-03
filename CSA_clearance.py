@@ -2725,7 +2725,10 @@ def create_report_excel():
     
     CSA20 = [
     #The following is the title header before there is data
-        ['CSA C22-3 No. 1-20 Table 20 \n Minimum in-span vertical clearances between supply conductors of the same circuit that are attached to the same supporting structure \n (See clause 5.9.2.3.) \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        ['CSA C22-3 No. 1-20 Table 20 \n \
+         Minimum in-span vertical clearances between supply conductors of the same circuit that are attached to the same supporting structure \n \
+         (See clause 5.9.2.3.) \n \
+         System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
         [' '],
         [' '],
         ['Maximum circuit line-to-ground voltage, kV', 'Minimum clearance, mm'],
@@ -2786,7 +2789,9 @@ def create_report_excel():
     
     CSA21 = [
     #The following is the title header before there is data
-        ['CSA C22-3 No. 1-20 Table 21 \n Minimum in-span vertical clearances between supply conductors of different circuits that are attached to the same supporting structure \n System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        ['CSA C22-3 No. 1-20 Table 21 \n \
+         Minimum in-span vertical clearances between supply conductors of different circuits that are attached to the same supporting structure \n \
+         System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
         [' '],
         [' '],
         ['Maximum lower conductor line-to-ground voltage, kV', 'Minimum in-span vertical clearance, mm'],
@@ -2834,8 +2839,90 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 22
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table22_data['Voltage range']
+
+    #Creating the title blocks. etc
+    CSA22_cell00 = 'Supply lateral, vertical, or line conductors and supply lateral or vertical conductors of the same or different circuits but not connected together'
+    CSA22_cell10 = 'Supply lateral, vertical, or line conductors and surface of structure, crossarms, and other non-energized supply plant, including grounding conductors'
+    CSA22_cell20 = 'Supply lateral, vertical, or line conductors and span or guy wire, except where conductors are supported by the span wire'
+    CSA22_cell30 = 'Supply-line conductor and lightning protection wire parallel to the line'
+
+    CSA22titles = np.array([CSA22_cell00, CSA22_cell10, CSA22_cell20, CSA22_cell30])
+    
+    CSA22 = ([
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 22 \n \
+         Minimum separations or clearances in any direction from supply conductors to other supply plant attached to the same supporting structure \n \
+         (See clause 5.9.5 and A.5.9.5.) \n \
+         System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Between', 'Separation or clearance, mm'],
+        [' ', 'Voltage of conductor(s), ac*'],
+        [' ', str(voltage_range)],
+        [' ', 'Basic', 'Design Clearance'],
+            ])
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(4):
+        row = [CSA22titles[i],  CSA_Table22_data['Basic'][i], CSA_Table22_data['DC'][i]]
+        CSA22.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_22 = len(CSA22)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_22 = len(CSA22[9])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA22 = []
+    for i in range(n_row_CSA_table_22):
+        if i < 3:
+            list_range_color_CSA22.append((i + 1, 1, i + 1, n_column_CSA_table_22, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA22.append((i + 1, 1, i + 1, n_column_CSA_table_22, color_bkg_data_1))
+        else:
+            list_range_color_CSA22.append((i + 1, 1, i + 1, n_column_CSA_table_22, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_22 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': [(1, 1, 3, n_column_CSA_table_22, 'center'), (4, 1, 6, 1, 'center'), (4, 2, 4, 3, 'center'), (5, 2, 5, 3, 'center'), (6, 2, 6, 3, 'center')],
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA22,
+        'range_border': [(1, 1, 1, n_column_CSA_table_22), (2, 1, n_row_CSA_table_22, n_column_CSA_table_22)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_22)],
+    }
+
+    # define some footer notes
+    footer_CSA22 = (['* Clearances from connecting wires to switches or arresters may be less than that from line wires to switches or arresters.', 
+                     '† For voltages exceeding 50 kV, clearances shall be based on best engineering practices, but shall be not less than the separations specified for 50 kV.',
+                     '** This clearance may be reduced to 0 mm for conductors and cables 0–750 V, provided that the conductors are attached to the surface of the structure and grounded or covered by material of adequate insulating and mechanical properties.', 
+                     '†† Where this clearance cannot be achieved, adequate insulation shall be applied to the supply conductor.', 
+                     '‡‡ This clearance shall be increased to 300 mm for voltages 0.75–8 kV for a span wire or span guy wire running parallel to the supply conductor.', 
+                     '§§ The clearance shall be not less than the separations specified in Clause 5.9.1 (table 17).',
+                     'Voltages are rms line-to-ground.'])
+
+    # define the worksheet
+    CSA_Table_22 = {
+        'ws_name': 'CSA Table 22',
+        'ws_content': CSA22,
+        'cell_range_style': cell_format_CSA_22,
+        'footer': footer_CSA22
+    }
+#endregion
+
+
     #This determines the workbook and the worksheets within the workbook
-    workbook_content = [AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10, CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17, CSA_Table_18, CSA_Table_20, CSA_Table_21]
+    workbook_content = ([AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10,
+                         CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17, CSA_Table_18, CSA_Table_20, CSA_Table_21, CSA_Table_22])
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
