@@ -1569,18 +1569,56 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure):
     if  0 < voltage <= 0.75: 
         CSA23_clearance = CSA_23['0-750 V']
         voltage_range = '0 - 750 V'
+        voltage_adder = 0
     elif voltage <= 22: 
         CSA23_clearance = CSA_23['> 0.75 < 22 kV']
         voltage_range = '> 0.75 ≤ 5 kV'
+        voltage_adder = 0
     else:
         CSA23_clearance = CSA_23['> 22 < 50 kV*']
-        voltage_range = '> 22 kV *'
+        if voltage <= 50:
+            voltage_range = '> 22 kV'
+            voltage_adder = 0
+        else:
+            voltage_adder = (voltage-50) * 0.010
+            voltage_adder = np.round(voltage_adder.astype(float), Numpy_round_integer)
 
-    #Defiining an array that will contain the design clearance
+    #Defining an array that will contain the basic array with voltage adder
+    CSA23_clearance_basic = []
+
+    #For loop to add the voltage adder
+    for item in CSA23_clearance:
+        #First checks if value is an integer and if so adds the clearance
+        if isinstance(item, int):
+            CSA23_clearance_basic.append(item + voltage_adder)
+        #Then checks if value is a float and if so adds the clearance
+        elif isinstance(item, float):
+            CSA23_clearance_basic.append(item + voltage_adder)
+        #If the value is a string it will search trough the string for integers or floats
+        elif isinstance(item, str):
+            match = re.search(r'\d+(\.\d+)?', item)
+            #if a number is found in the string it will take the number out and add onto that number and then return a new number
+            if match:
+                num = float(match.group())
+                new_num = num + voltage_adder
+                new_item = item[:match.start()] + str(new_num) + item[match.end():]
+                #This new number is then appended to the array
+                CSA23_clearance_basic.append(new_item)
+            #If no number is found the original string passes through into the new array
+            else:
+                CSA23_clearance_basic.append(item)
+        #If there is something that is not a string, float or integer it will pass into the new array unchanged
+        else:
+            CSA23_clearance_basic.append(item)
+
+    CSA23_clearance_basic = np.array(CSA23_clearance_basic)
+
+    #Defining an array that will contain the design clearance
     CSA_23_Design_Clearance = []
 
-    #For loop to add clearance onto Table 22 values regardless of if there are symbols on the number
-    for item in CSA23_clearance:
+
+    #For loop to add clearance onto values regardless of if there are symbols on the number
+    for item in CSA23_clearance_basic:
         #First checks if value is an integer and if so adds the clearance
         if isinstance(item, int):
             CSA_23_Design_Clearance.append(item + Design_Buffer_Same_Structure)
@@ -1608,7 +1646,7 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 
 
     data = {
-        'Basic': CSA23_clearance,
+        'Basic': CSA23_clearance_basic,
         'DC': CSA_23_Design_Clearance,
 
         'Voltage range': voltage_range
@@ -1617,7 +1655,7 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 CSA23_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
 CSA_Table23_data = CSA_Table_23_clearance(**CSA23_input)
 
-#The following function is for CSA Table 23
+#The following function is for CSA Table 24
 def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure):
 
     #Getting Phase to ground voltage
@@ -1641,9 +1679,13 @@ def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         voltage_range = '> 15 kV and ≤ 22 kV'
     else:
         CSA24_clearance = CSA_24.loc['> 22 kV and ≤ 250 kV (+10mm/kV over 22kV)'][0]
+        CSA24_clearance = CSA24_clearance + (10 * (voltage-22))
+        CSA24_clearance = np.round(CSA24_clearance.astype(float), Numpy_round_integer)
         voltage_range = '> 22 kV and ≤ 250 kV'
 
-    
+    #Conversion of design buffer to mm
+    Design_Buffer_Same_Structure = Design_Buffer_Same_Structure *1000
+
     #Figuring out if the number has any symbols attached to it
     #If there are symbols they will be removed so addition can be done and then added back in
     if isinstance(CSA24_clearance, int):
@@ -1663,6 +1705,153 @@ def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure):
     return data
 CSA24_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
 CSA_Table24_data = CSA_Table_24_clearance(**CSA24_input)
+
+#The following function is for CSA Table 25
+def CSA_Table_25_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_25 = pd.read_excel(ref_table, "CSA table 25")
+
+    #Index being set so that row can be found using name
+    CSA_25.set_index("Type of plant near which the guy passes", inplace = True)
+
+    CSA_25_comms = CSA_25.loc['Communication line plant'][0]
+    CSA_25_guy = CSA_25.loc['Supply guy wires and span wires'][0]
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 0.75: 
+        CSA25_clearance = CSA_25.loc['0 - 750 v'][0]
+        voltage_range = '0 - 750 V'
+    elif voltage <= 22: 
+        CSA25_clearance = CSA_25.loc['> 0.75 kV and ≤ 22 kV'][0]
+        voltage_range = '> 15 kV and ≤ 22 kV'
+    else:
+        CSA25_clearance = CSA_25.loc['> 22kV (+0.01 m/kV over 22kV)'][0]
+        CSA25_clearance = CSA25_clearance + (0.01 * (voltage-22))
+        CSA25_clearance = np.round(CSA25_clearance.astype(float), Numpy_round_integer)
+        voltage_range = '> 22 kV'
+
+    Basic_clearances = np.array([CSA_25_comms, CSA25_clearance, CSA_25_guy])
+    Design_clearances = Basic_clearances + (np.ones(len(Basic_clearances)) * Design_Buffer_Same_Structure)
+
+    data = {
+        'Basic': Basic_clearances,
+        'DC': Design_clearances,
+
+
+        'Voltage range': voltage_range
+        }
+    return data
+CSA25_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA_Table25_data = CSA_Table_25_clearance(**CSA25_input)
+
+#The following function is for CSA Table 26
+def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+
+    #Getting Phase to ground voltage
+    voltage = p2p_voltage / np.sqrt(3)
+
+    #Start by opening the sheet for CSA Table 3 within the reference table file
+    CSA_26 = pd.read_excel(ref_table, "CSA table 26")
+
+    #Index being set so that row can be found using name
+    CSA_26.set_index("Type of plant over or near which the guy passes", inplace = True)
+
+    CSA_26_comms = CSA_26.loc['Communication line plant']
+
+    #Figuring out the correct row name
+    if  0 < voltage <= 0.75: 
+        CSA26_clearance = CSA_26.loc['0-750 v']
+        voltage_range = '0 - 750 V'
+    elif voltage <= 5: 
+        CSA26_clearance = CSA_26.loc['> 0.75 kV and ≤ 5 kV']
+        voltage_range = '> 0.75 kV and ≤ 5 kV'
+    elif voltage <= 15: 
+        CSA26_clearance = CSA_26.loc['> 5kV and ≤ 15 kV']
+        voltage_range = '> 5kV and ≤ 15 kV'
+    elif voltage <= 22: 
+        CSA26_clearance = CSA_26.loc['> 15 kV and ≤ 22 kV']
+        voltage_range = '> 15 kV and ≤ 22 kV'
+    else:
+        CSA26_clearance = CSA_26.loc['> 22 kV (+10mm/kV over 22kV)']
+        CSA26_clearance = CSA26_clearance + np.ones(len(CSA26_clearance))*(10 * (voltage-22))
+        CSA26_clearance = np.round(CSA26_clearance.astype(float), Numpy_round_integer)
+        voltage_range = '> 22 kV'
+
+    #Defining an array that will contain the design clearance
+    CSA_26_Design_Clearance = []
+    CSA_26_Design_Clearance_Comms = []
+
+    #For loop to add clearance onto comms
+    for item in CSA_26_comms:
+        #First checks if value is an integer and if so adds the clearance
+        if isinstance(item, int):
+            CSA_26_Design_Clearance_Comms.append(item + Design_Buffer_Same_Structure)
+        #Then checks if value is a float and if so adds the clearance
+        elif isinstance(item, float):
+            CSA_26_Design_Clearance_Comms.append(item + Design_Buffer_Same_Structure)
+        #If the value is a string it will search trough the string for integers or floats
+        elif isinstance(item, str):
+            match = re.search(r'\d+(\.\d+)?', item)
+            #if a number is found in the string it will take the number out and add onto that number and then return a new number
+            if match:
+                num = float(match.group())
+                new_num = num + Design_Buffer_Same_Structure
+                new_item = item[:match.start()] + str(new_num) + item[match.end():]
+                #This new number is then appended to the array
+                CSA_26_Design_Clearance_Comms.append(new_item)
+            #If no number is found the original string passes through into the new array
+            else:
+                CSA_26_Design_Clearance_Comms.append(item)
+        #If there is something that is not a string, float or integer it will pass into the new array unchanged
+        else:
+            CSA_26_Design_Clearance_Comms.append(item)
+
+    CSA_26_Design_Clearance_Comms = np.array(CSA_26_Design_Clearance_Comms)
+
+    #For loop to add clearance onto conductors
+    for item in CSA26_clearance:
+        #First checks if value is an integer and if so adds the clearance
+        if isinstance(item, int):
+            CSA_26_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+        #Then checks if value is a float and if so adds the clearance
+        elif isinstance(item, float):
+            CSA_26_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+        #If the value is a string it will search trough the string for integers or floats
+        elif isinstance(item, str):
+            match = re.search(r'\d+(\.\d+)?', item)
+            #if a number is found in the string it will take the number out and add onto that number and then return a new number
+            if match:
+                num = float(match.group())
+                new_num = num + Design_Buffer_Same_Structure
+                new_item = item[:match.start()] + str(new_num) + item[match.end():]
+                #This new number is then appended to the array
+                CSA_26_Design_Clearance.append(new_item)
+            #If no number is found the original string passes through into the new array
+            else:
+                CSA_26_Design_Clearance.append(item)
+        #If there is something that is not a string, float or integer it will pass into the new array unchanged
+        else:
+            CSA_26_Design_Clearance.append(item)
+
+    CSA_26_Design_Clearance = np.array(CSA_26_Design_Clearance)
+
+    CSA_26_comms_clearance = np.array([CSA_26_comms[0], CSA_26_Design_Clearance_Comms[0], CSA_26_comms[1], CSA_26_Design_Clearance_Comms[1]])
+    CSA_26_conductor_clearance = np.array([CSA26_clearance[0], CSA_26_Design_Clearance[0], CSA26_clearance[1], CSA_26_Design_Clearance[1]])
+
+    data = {
+        'Comms': CSA_26_comms_clearance,
+        'Conductors': CSA_26_conductor_clearance,
+
+        'Voltage range': voltage_range
+        }
+    return data
+CSA26_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA_Table26_data = CSA_Table_26_clearance(**CSA26_input)
+
 
 #The following function will create worksheets from the data calculated by the functions above
 def create_report_excel():
@@ -3197,10 +3386,150 @@ def create_report_excel():
     }
 #endregion
 
+#CSA Table 25
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table25_data['Voltage range']
+    
+    CSA25_cell00 = 'Communication line plant'
+    CSA25_cell10 = 'Current-carrying supply plant, ac' + str(voltage_range)
+    CSA25_cell20 = 'Supply guy wires and span wires'
+
+    CSA25titles = np.array([CSA25_cell00, CSA25_cell10, CSA25_cell20])
+
+    CSA25 = ([
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 25 \n \
+         Minimum clearances from guys to plant of another system \n \
+         (See clauses 5.11.2.1 and A.5.11.2.) \n \
+         System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Type of plant near which the guy passes','Minimum clearance, m'],
+        [' ', 'Basic', 'Design Clearance'],
+            ])
+
+    
+    #The following will fill out the rest of the table with numbers in their respective problems
+    for i in range(3):
+        row = [CSA25titles[i], CSA_Table25_data['Basic'][i], CSA_Table25_data['DC'][i]]
+        CSA25.append(row)
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_25 = len(CSA25)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_25 = len(CSA25[6])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA25 = []
+    for i in range(n_row_CSA_table_25):
+        if i < 3:
+            list_range_color_CSA25.append((i + 1, 1, i + 1, n_column_CSA_table_25, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA25.append((i + 1, 1, i + 1, n_column_CSA_table_25, color_bkg_data_1))
+        else:
+            list_range_color_CSA25.append((i + 1, 1, i + 1, n_column_CSA_table_25, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_25 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': ([(1, 1, 3, n_column_CSA_table_25, 'center'), (4, 1, 5, 1, 'center'), (4, 2, 4, 3, 'center')]),
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA25,
+        'range_border': [(1, 1, 1, n_column_CSA_table_25), (2, 1, n_row_CSA_table_25, n_column_CSA_table_25)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_25)],
+    }
+
+    # define some footer notes
+    footer_CSA25 = (['Voltages are rms line-to-ground.'])
+
+    # define the worksheet
+    CSA_Table_25 = {
+        'ws_name': 'CSA Table 25',
+        'ws_content': CSA25,
+        'cell_range_style': cell_format_CSA_25,
+        'footer': footer_CSA25
+    }
+#endregion
+
+#CSA Table 26
+#region
+
+    #Importing voltage and voltage range to be used in the table titles
+    voltage = inputs['p2p_voltage']
+    line2ground_voltage = voltage / np.sqrt(3)
+    voltage_range = CSA_Table25_data['Voltage range']
+    
+    CSA26_cell00 = 'Communication line plant'
+    CSA26_cell10 = 'Current-carrying supply plant' + str(voltage_range)
+
+    CSA26titles = np.array([CSA26_cell00, CSA26_cell10])
+
+    CSA26 = ([
+    #The following is the title header before there is data
+        ['CSA C22-3 No. 1-20 Table 26 \n \
+         Minimum clearance or separation between guys and other plant attached to the joint-use structure \n \
+         (See clauses 5.11.2.2 and A.5.11.2.) \n \
+         System Voltage: ' + str(voltage) + ' kV (AC 3-phase)'],
+        [' '],
+        [' '],
+        ['Type of plant over or near which the guy passes','Minimum clearance or separation from guy, mm'],
+        [' ','Guy not parallel to plant', ' ', 'Guy parallel to plant'],
+        [' ', 'Basic', 'Design Clearance', 'Basic', 'Design Clearance'],
+        [CSA26titles[0], CSA_Table26_data['Comms'][0], CSA_Table26_data['Comms'][1], CSA_Table26_data['Comms'][2], CSA_Table26_data['Comms'][3]],
+        [CSA26titles[1], CSA_Table26_data['Conductors'][0], CSA_Table26_data['Conductors'][1], CSA_Table26_data['Conductors'][2], CSA_Table26_data['Conductors'][3]]
+            ])
+
+
+    #This is retrieving the number of rows in each table array
+    n_row_CSA_table_26 = len(CSA26)
+
+    #This is retrieving the number of columns in the row specified in the columns
+    n_column_CSA_table_26 = len(CSA26[5])
+
+    #Creating an empty variable to determine the colour format that is used in the table
+    list_range_color_CSA26 = []
+    for i in range(n_row_CSA_table_26):
+        if i < 3:
+            list_range_color_CSA26.append((i + 1, 1, i + 1, n_column_CSA_table_26, color_bkg_header))
+        elif i % 2 == 0:
+            list_range_color_CSA26.append((i + 1, 1, i + 1, n_column_CSA_table_26, color_bkg_data_1))
+        else:
+            list_range_color_CSA26.append((i + 1, 1, i + 1, n_column_CSA_table_26, color_bkg_data_2))
+
+    # define cell format
+    cell_format_CSA_26 = {
+        #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
+        'range_merge': ([(1, 1, 3, n_column_CSA_table_26, 'center'), (4, 1, 6, 1, 'center'), (4, 2, 4, 5, 'center'), (5, 2, 5, 3, 'center'), (5, 4, 5, 5, 'center')]),
+        'range_font_bold' : [(1, 1, 2, 1)],
+        'range_color': list_range_color_CSA26,
+        'range_border': [(1, 1, 1, n_column_CSA_table_26), (2, 1, n_row_CSA_table_26, n_column_CSA_table_26)],
+        'row_height': [(1, 50)],
+        'column_width': [(i + 1, 30) for i in range(n_column_CSA_table_26)],
+    }
+
+    # define some footer notes
+    footer_CSA26 = (['* This clearance may be reduced to 75 mm where adequate insulation is provided.',
+                     'Voltages are rms line-to-ground.'])
+
+    # define the worksheet
+    CSA_Table_26 = {
+        'ws_name': 'CSA Table 26',
+        'ws_content': CSA26,
+        'cell_range_style': cell_format_CSA_26,
+        'footer': footer_CSA26
+    }
+#endregion
+
     #This determines the workbook and the worksheets within the workbook
     workbook_content = ([AEUC_Table_5, AEUC_Table_7, CSA_Table_2, CSA_Table_3, CSA_Table_5, CSA_Table_6, CSA_Table_7, CSA_Table_9, CSA_Table_10,
                          CSA_Table_11, CSA_Table_13, CSA_Table_14, CSA_Table_15, CSA_Table_16, CSA_Table_17, CSA_Table_18, CSA_Table_20, 
-                         CSA_Table_21, CSA_Table_22, CSA_Table_23, CSA_Table_24])
+                         CSA_Table_21, CSA_Table_22, CSA_Table_23, CSA_Table_24, CSA_Table_25, CSA_Table_26])
 
     #This will create the workbook with the filename specified at the top of this function
     report_xlsx_general.create_workbook(workbook_content=workbook_content, filename=filename)
