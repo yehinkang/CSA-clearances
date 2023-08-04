@@ -91,8 +91,9 @@ def save2xl(x):
     Excel_export.to_excel(fname)
 
 #The following function will take in Longitude and Latitude and return the closest location on which there is information
-#Currently Using the old tables but will have to be updated
-def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, Westing_mins, Westing_seconds):
+#This is set to work with either locations or longitude/latitude
+#CSA_C22.3_No.1_table_D2 is being referenced
+def location_lookup(Location, Northing_deg, Northing_mins, Northing_seconds, Westing_deg, Westing_mins, Westing_seconds):
     #Taking the inputs and turning them into decimal Latitude and Longitude
     Latitude = Northing_deg + (Northing_mins/60) + (Northing_seconds/3600)
     Longitude = Westing_deg + (Westing_mins/60) + (Westing_seconds/3600)
@@ -110,36 +111,48 @@ def location_lookup(Northing_deg, Northing_mins, Northing_seconds, Westing_deg, 
     Elevation = Lookup['Elevation, m']
     Snow_Depth = Lookup['Mean annual maximum snow depth, m']
 
-    #Combining the Latitude and Longitude columns into a 2D data frame
-    Combined_Coord = pd.concat([Latitude_lookup,Longitude_lookup], axis = 1)
+    if Place_name.isin([Location]).any():
 
-    #Transforming the dataframe into a numpy array
-    Combined_Coord_array = Combined_Coord.to_numpy()
+        Closest_place_name = Location
+        position = Place_name[Place_name == Location].index
 
-    #Finding the closest match to the inputted coordinates in the array
-    Closest = Combined_Coord_array[np.linalg.norm(Combined_Coord_array-Input_Coordinates, axis=1).argmin()]
+        Max_snow_depth = Snow_Depth.iloc[position].iloc[0]
 
-    #Find the position in the array where the coordinate is
-    position = np.where((Combined_Coord_array == Closest).all(axis=1))[0][0]
+        Custom_Elevation = {key: inputs[key] for key in ['Custom_Elevation']}
+        if Custom_Elevation['Custom_Elevation'] == 0:
+            Closest_elevation = Elevation.iloc[position]
+        else:
+            Closest_elevation = Custom_Elevation['Custom_Elevation']
 
-    #Finding the value in the same position in the other datasets
-    Closest_place_name = Place_name.iloc[position]
-    Max_snow_depth = Snow_Depth.iloc[position]
+    else:
+        #Combining the Latitude and Longitude columns into a 2D data frame
+        Combined_Coord = pd.concat([Latitude_lookup,Longitude_lookup], axis = 1)
+
+        #Transforming the dataframe into a numpy array
+        Combined_Coord_array = Combined_Coord.to_numpy()
+
+        #Finding the closest match to the inputted coordinates in the array
+        Closest = Combined_Coord_array[np.linalg.norm(Combined_Coord_array-Input_Coordinates, axis=1).argmin()]
+
+        #Find the position in the array where the coordinate is
+        position = np.where((Combined_Coord_array == Closest).all(axis=1))[0][0]
+
+        #Finding the value in the same position in the other datasets
+        Closest_place_name = Place_name.iloc[position]
+        Max_snow_depth = Snow_Depth.iloc[position]
 
     Custom_Elevation = {key: inputs[key] for key in ['Custom_Elevation']}
     if Custom_Elevation['Custom_Elevation'] == 0:
         Closest_elevation = Elevation.iloc[position]
     else:
         Closest_elevation = Custom_Elevation['Custom_Elevation']
-
     #The following will return the values as calculated by the function to the user.
-    return Closest_place_name, Closest_elevation, Max_snow_depth
-
+    return Closest_place_name, Closest_elevation, Max_snow_depth    
 #The following runs the location_lookup function with the dictionary inputs for use in code going forwards
-loc_lookup_input = {key: inputs[key] for key in ['Northing_deg', 'Northing_mins', 'Northing_seconds', 'Westing_deg', 'Westing_mins', 'Westing_seconds']}
+loc_lookup_input = {key: inputs[key] for key in ['Location', 'Northing_deg', 'Northing_mins', 'Northing_seconds', 'Westing_deg', 'Westing_mins', 'Westing_seconds']}
 Place, Altitude, Snow_Depth = location_lookup(**loc_lookup_input)
 
-#ALL FUNCTION USE KILOVOLTS AND METERS
+#ALL FUNCTION USE KILOVOLTS AND METERS AS INPUTS
 
 #The following function is for AEUC table 5
 def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
@@ -149,10 +162,10 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     #Start by opening the sheet for AEUC Table 5 within the reference table file
     AEUC_5 = pd.read_excel(ref_table, "AEUC Table 5")
 
-    #this column is for guy wires, comms.etc
+    #this is selecting a column for guy wires, comms.etc
     AEUC_neut_clearance = AEUC_5['Neutral']
 
-    #This next little bit will determine which column should be referenced
+    #This next little bit will determine which column should be referenced for conductors
     if  0 < voltage <= 0.75: 
         #this column is for 120-660V
         AEUC_clearance = AEUC_5['0 to 0.75']
