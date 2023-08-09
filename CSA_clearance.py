@@ -29,7 +29,7 @@ ref_table= pd.ExcelFile(ref_table_filepath)
 #This is the input dictionary that all functions will use
 inputs = {
     'p2p_voltage': 2000,
-    'Max_Overvoltage': 0.05,
+    'Max_Overvoltage': 5,
 
     'Buffer_Neut':4,
     'Buffer_Live':3,
@@ -62,7 +62,7 @@ inputs = {
     #Crossing_or_Underbuild
         'Is_main_wire_upper':True,
         'XING_P2P_Voltage':79,
-        'XING_Max_Overvoltage':0.05,
+        'Max_Overvoltage_XING': 5,
 
 }
 
@@ -155,10 +155,14 @@ Place, Altitude, Snow_Depth = location_lookup(**loc_lookup_input)
 #ALL FUNCTION USE KILOVOLTS AND METERS AS INPUTS
 
 #The following function is for AEUC table 5
-def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
+def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage):
 
     #Getting Phase to Ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for AEUC Table 5 within the reference table file
     AEUC_5 = pd.read_excel(ref_table, "AEUC Table 5")
@@ -280,13 +284,18 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         }
     return data
 #Running the AEUC table 5 function to get a dictionary that can be used in a webapp and used in the export to excel code later on
-AEUC5_input = {key: inputs[key] for key in ['p2p_voltage', 'Buffer_Neut', 'Buffer_Live']}
+AEUC5_input = {key: inputs[key] for key in ['p2p_voltage', 'Buffer_Neut', 'Buffer_Live', 'Max_Overvoltage']}
 AEUC_Table5_data  = AEUC_table5_clearance(**AEUC5_input)
 
 #The following function is for AEUC table 7
-def AEUC_table7_clearance(p2p_voltage, Design_buffer_2_obstacles):
+def AEUC_table7_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvoltage):
 
+    #Getting phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+
     #Start by opening the sheet for AEUC Table 7 within the reference table file
     AEUC_7 = pd.read_excel(ref_table, "AEUC Table 7")
 
@@ -382,13 +391,18 @@ def AEUC_table7_clearance(p2p_voltage, Design_buffer_2_obstacles):
         }
     
     return data
-AEUC7_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
+AEUC7_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'Max_Overvoltage']}
 AEUC_Table7_data = AEUC_table7_clearance(**AEUC7_input)
 
 #The following function is for CSA Table 2
-def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
-
+def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage):
+    
+    #Adding the voltage multiplier
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+
     #Start by opening the sheet for CSA Table 2 within the reference table file
     CSA_2 = pd.read_excel(ref_table, "CSA table 2")
 
@@ -398,55 +412,55 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     if  0 < voltage <= 0.75: 
         #this column is for 120-660V
         CSA_2_clearance = CSA_2['0-0.75']
-        voltage_range = '0-0.75 kV'
+        voltage_range = ' 0-0.75 kV'
         column = 'III'
     elif voltage <=22: 
         #this column is for 4, 13 & 25 kV
         CSA_2_clearance = CSA_2['0.75-22']
-        voltage_range = '> 0.75 ≤ 22'
+        voltage_range = ' > 0.75 ≤ 22'
         column = 'IV'
     elif voltage <=50: 
         #this column is for 35, 69 & 72 kV
         CSA_2_clearance = CSA_2['22-50']
-        voltage_range = '> 22 ≤ 50'
+        voltage_range = ' > 22 ≤ 50'
         column = 'V'
     elif voltage <=90: 
         #this column is for 138 & 144 kV
         CSA_2_clearance = CSA_2['50-90']
-        voltage_range = '> 50 ≤ 90'
+        voltage_range = ' > 50 ≤ 90'
         column = 'VI'
     elif voltage <=120: 
         #this column is for 240 kV
         CSA_2_clearance = CSA_2['90-120']
-        voltage_range = '> 90 ≤ 120'
+        voltage_range = ' > 90 ≤ 120'
         column = 'VII'
     elif voltage <=150: 
         CSA_2_clearance = CSA_2['120-150']
-        voltage_range = '> 120 ≤ 150'
+        voltage_range = ' > 120 ≤ 150'
         column = 'VIII'
     elif voltage <=190: 
         CSA_2_clearance = CSA_2['150-190']
-        voltage_range = '> 150 ≤ 190'
+        voltage_range = ' > 150 ≤ 190'
         column = 'IX'
     elif voltage <= 219: 
         #this column is for 360 kV
         CSA_2_clearance = CSA_2['219 kV']
-        voltage_range = '219 (360)'
+        voltage_range = ' 219 (360)'
         column = 'X'
     elif voltage <= 318: 
         #this column is for 500 kV
         CSA_2_clearance = CSA_2['318 kV']
-        voltage_range = '318 (500)'
+        voltage_range = ' 318 (500)'
         column = 'XI'
     elif voltage <= 442:
         #this column is for 735 kV
         CSA_2_clearance = CSA_2['442 kV']
-        voltage_range = '442 (735)'
+        voltage_range = ' 442 (735)'
         column = 'XII'
     else:
         CSA_2_clearance = CSA_2['442 kV']
         CSA_2_clearance = np.zeros(len(CSA_2_clearance))
-        voltage_range = 'Voltage out of range'
+        voltage_range = ' Voltage out of range'
         column = 'ERROR'
 
     Repave_Adder = np.array([0.225,0,0,0.225,0,0.3], dtype=float)
@@ -468,6 +482,7 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     CSA_Design_Clearance = Buffer_Live + CSA_Total
 
     #Rounding all the values in the arrays
+    
     CSA_2_neut_clearance = np.round(CSA_2_neut_clearance, Numpy_round_integer)
     Repave_Adder = np.round(Repave_Adder, Numpy_round_integer)
     Snow_Adder = np.round(Snow_Adder, Numpy_round_integer)
@@ -478,16 +493,29 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     CSA_Total = np.round(CSA_Total, Numpy_round_integer)
     CSA_Design_Clearance = np.round(CSA_Design_Clearance, Numpy_round_integer)
 
+    CSA_2_neut_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_2_neut_clearance)
+    Repave_Adder = np.char.mod(f'%0.{Numpy_round_integer}f', Repave_Adder)
+    Snow_Adder = np.char.mod(f'%0.{Numpy_round_integer}f', Snow_Adder)
+    Neutral_CSA_Total = np.char.mod(f'%0.{Numpy_round_integer}f', Neutral_CSA_Total)
+    Neutral_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', Neutral_Design_Clearance)
+    CSA_2_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_2_clearance)
+    Altitude_Adder = np.char.mod(f'%0.{Numpy_round_integer}f', Altitude_Adder)
+    CSA_Total = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_Total)
+    CSA_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_Design_Clearance)
+
     #Adding Conductor repave and snow adders so that in error cases the neutral clearances still show
     Cond_Snow_Adder = Snow_Adder
     Cond_Repave_Adder = Repave_Adder
 
+    #Adding errors for overvoltage conditions
+    DataLength = len(CSA_2_clearance)
     if voltage > 442:
-        Cond_Repave_Adder = np.zeros(len(CSA_2_clearance))
-        Cond_Snow_Adder = np.zeros(len(CSA_2_clearance))
-        Altitude_Adder = np.zeros(len(CSA_2_clearance))
-        CSA_Total = np.zeros(len(CSA_2_clearance))
-        CSA_Design_Clearance = np.zeros(len(CSA_2_clearance))
+        CSA_2_clearance = np.full(DataLength, "ERROR Voltage too high")
+        Cond_Repave_Adder = CSA_2_clearance
+        Cond_Snow_Adder = CSA_2_clearance
+        Altitude_Adder = CSA_2_clearance
+        CSA_Total = CSA_2_clearance
+        CSA_Design_Clearance = CSA_2_clearance
 
     #Creating a dictionary that will hold all the values that are outputted
     data = {
@@ -510,13 +538,18 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         }
     
     return data
-CSA2_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
+CSA2_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live", 'Max_Overvoltage']}
 CSA_Table2_data = CSA_Table_2_clearance(**CSA2_input)
 
 #The following function is for CSA Table 3
-def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
+def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage):
 
+    #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_3 = pd.read_excel(ref_table, "CSA table 3")
 
@@ -555,13 +588,13 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     Neutral_Design_Clearance = Buffer_Neut + CSA_3_neut_clearance
     CSA_Design_Clearance = Buffer_Live + CSA_Total
 
-    #Rounding the
-    CSA_3_neut_clearance = np.round(CSA_3_neut_clearance, Numpy_round_integer)
-    Neutral_Design_Clearance = np.round(Neutral_Design_Clearance, Numpy_round_integer)
-    CSA_3_clearance = np.round(CSA_3_clearance, Numpy_round_integer)
-    Altitude_Adder = np.round(Altitude_Adder, Numpy_round_integer)
-    CSA_Total = np.round(CSA_Total, Numpy_round_integer)
-    CSA_Design_Clearance = np.round(CSA_Design_Clearance, Numpy_round_integer)
+    #Rounding the values
+    CSA_3_neut_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_3_neut_clearance)
+    Neutral_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', Neutral_Design_Clearance)
+    CSA_3_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_3_clearance)
+    Altitude_Adder = np.char.mod(f'%0.{Numpy_round_integer}f', Altitude_Adder)
+    CSA_Total = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_Total)
+    CSA_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_Design_Clearance)
 
     data = {
         'Neutral Basic (m)': CSA_3_neut_clearance,
@@ -576,13 +609,18 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         }
 
     return data
-CSA3_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
+CSA3_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live", 'Max_Overvoltage']}
 CSA_Table3_data = CSA_Table_3_clearance(**CSA3_input)
 
 #The following function is for CSA Table 5
-def CSA_Table_5_clearance(p2p_voltage, Buffer_Live):
+def CSA_Table_5_clearance(p2p_voltage, Buffer_Live, Max_Overvoltage):
 
+    #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+
     #Start by opening the sheet for CSA Table 5 within the reference table file
     CSA_5 = pd.read_excel(ref_table, "CSA table 5")
 
@@ -601,16 +639,22 @@ def CSA_Table_5_clearance(p2p_voltage, Buffer_Live):
         Voltage_range = '> 50 ≤ 90'
     else: 
         CSA_5_clearance = CSA_5['>50kV<90kV']
-        CSA_5_clearance = np.zeros(len(CSA_5_clearance))
-        Buffer_Live = 0
-        Voltage_range = 'Error'
 
     #Design_Clearance = Design Clearance
     Design_Clearance = CSA_5_clearance + Buffer_Live
 
     #Rounding the clearance values
-    CSA_5_clearance = np.round(CSA_5_clearance, Numpy_round_integer)
-    Design_Clearance = np.round(Design_Clearance, Numpy_round_integer)
+    CSA_5_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_5_clearance)
+    Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Clearance)
+
+    #Adding an error condition in case of too high of a voltage
+    DataLength = len(CSA_5_clearance)
+    if voltage > 90:
+        CSA_5_clearance = np.full(DataLength, "ERROR Voltage too high")
+        Design_Clearance = CSA_5_clearance
+        Voltage_range = 'Error'
+
+
 
     #Creating a dictionary to store all the outpt data
     data = {
@@ -621,13 +665,18 @@ def CSA_Table_5_clearance(p2p_voltage, Buffer_Live):
         }
 
     return data
-CSA5_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Live"]}
+CSA5_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Live", 'Max_Overvoltage']}
 CSA_Table5_data = CSA_Table_5_clearance(**CSA5_input)
 
 #The following function is for CSA Table 6
-def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
+def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Max_Overvoltage):
 
+    #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_6 = pd.read_excel(ref_table, "CSA table 6")
     
@@ -660,8 +709,8 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
 
     #Design_Clearance = Design Clearance
     Design_Clearance_neut = CSA_6_neut_clearance + Buffer_Neut
-    Design_Clearance_sub750 = CSA_6_sub750_clearance + Buffer_Live
-    Design_Clearance = CSA_6_clearance + Buffer_Live
+    Design_Clearance_sub750 = CSA_6_sub750_clearance + Buffer_Neut
+    Design_Clearance = CSA_6_clearance + Buffer_Neut
 
     #Rounding all the values
     CSA_6_clearance = np.round(CSA_6_clearance, Numpy_round_integer)
@@ -677,6 +726,11 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     Basic_Siding = np.array([CSA_6_neut_clearance[1], CSA_6_sub750_clearance[1], CSA_6_clearance[1]])
     Design_Clearance_Siding = np.array([Design_Clearance_neut[1], Design_Clearance_sub750[1], Design_Clearance[1]])
 
+    Basic_Main_Track = np.char.mod(f'%0.{Numpy_round_integer}f', Basic_Main_Track)
+    Design_Clearance_Main_Track = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Clearance_Main_Track)
+    Basic_Siding = np.char.mod(f'%0.{Numpy_round_integer}f', Basic_Siding)
+    Design_Clearance_Siding = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Clearance_Siding)
+
     #Creating a dictionary to hold outputs
     data = {
         'Main Basic (m)': Basic_Main_Track,
@@ -688,7 +742,7 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         }
 
     return data
-CSA6_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
+CSA6_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", 'Max_Overvoltage']}
 CSA_Table6_data = CSA_Table_6_clearance(**CSA6_input)
 
 #The following function is for CSA Table 7
@@ -705,8 +759,8 @@ def CSA_Table_7_clearance(Buffer_Live):
     CSA7_Design_Clearance = CSA_7clearance + Buffer_Live_array
 
     #Rounding
-    CSA_7clearance = np.round(CSA_7clearance, Numpy_round_integer)
-    CSA7_Design_Clearance = np.round(CSA7_Design_Clearance, Numpy_round_integer)
+    CSA_7clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_7clearance)
+    CSA7_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA7_Design_Clearance)
 
     data = {
         'Basic (m)': CSA_7clearance,
@@ -717,8 +771,14 @@ CSA7_input = {key: inputs[key] for key in ["Buffer_Live"]}
 CSA_Table7_data = CSA_Table_7_clearance(**CSA7_input)
 
 #The following function is for CSA Table 9
-def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
+def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage):
+
+    #Point to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+
     #Start by opening the sheet for CSA Table 9 within the reference table file
     CSA_9 = pd.read_excel(ref_table, "CSA table 9")
 
@@ -754,15 +814,15 @@ def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     Design_Clearance_obs_vert = CSA_9_obs_vert + adder_array
 
     #Rounding the values
-    CSA_9_build_hor = np.round(CSA_9_build_hor, Numpy_round_integer)
-    CSA_9_build__vert = np.round(CSA_9_build__vert, Numpy_round_integer)
-    CSA_9_obs_hor = np.round(CSA_9_obs_hor, Numpy_round_integer)
-    CSA_9_obs_vert = np.round(CSA_9_obs_vert, Numpy_round_integer)
+    CSA_9_build_hor = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_9_build_hor)
+    CSA_9_build__vert = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_9_build__vert)
+    CSA_9_obs_hor = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_9_obs_hor)
+    CSA_9_obs_vert = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_9_obs_vert)
 
-    Design_Clearance_build_hor = np.round(Design_Clearance_build_hor, Numpy_round_integer)
-    Design_Clearance_build__vert = np.round(Design_Clearance_build__vert, Numpy_round_integer)
-    Design_Clearance_obs_hor = np.round(Design_Clearance_obs_hor, Numpy_round_integer)
-    Design_Clearance_obs_vert = np.round(Design_Clearance_obs_vert, Numpy_round_integer)
+    Design_Clearance_build_hor = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Clearance_build_hor)
+    Design_Clearance_build__vert = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Clearance_build__vert)
+    Design_Clearance_obs_hor = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Clearance_obs_hor)
+    Design_Clearance_obs_vert = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Clearance_obs_vert)
 
     #Creating a dictionary that will have the exports from the table
     data = {
@@ -777,14 +837,17 @@ def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         'Obstacles Design Clearance vertical': Design_Clearance_obs_vert,
         }
     return data
-CSA9_input = {key: inputs[key] for key in ['p2p_voltage',"Buffer_Neut", "Buffer_Live"]}
+CSA9_input = {key: inputs[key] for key in ['p2p_voltage',"Buffer_Neut", "Buffer_Live", 'Max_Overvoltage']}
 CSA_Table9_data = CSA_Table_9_clearance(**CSA9_input)
 
 #The following function is for CSA Table 10
-def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles):
+def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvoltage):
 
     #Getting Phase to Ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA table 10 within the reference table file
     CSA_10 = pd.read_excel(ref_table, "CSA table 10")
@@ -796,16 +859,16 @@ def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles):
     #Finding correct clearance value from the voltage
     if  0 < voltage <= 0.75: 
         CSA_10_clearance = CSA_10.loc['0-750 v'].values
-        Voltage_range = '0–750V'
+        Voltage_range = '0–750V kV'
     elif voltage <=22: 
         CSA_10_clearance = CSA_10.loc['> 0.75 < 22 kV'].values
-        Voltage_range = '> 0.75 ≤ 22'
+        Voltage_range = '> 0.75 ≤ 22 kV'
     elif voltage <=50:
         CSA_10_clearance = CSA_10.loc['> 22 < 50 kV'].values
-        Voltage_range = '> 22 ≤ 50'
+        Voltage_range = '> 22 ≤ 50 kV'
     else: 
         CSA_10_clearance = CSA_10.loc['> 50 kV ac + 0.010 m/kV over 50 kV'].values
-        Voltage_range = '> 50'
+        Voltage_range = '> 50 kV'
 
     #Creating a clearance adder from the design buffer
     clearance_adder = np.ones(len(CSA_10_clearance)) * Design_buffer_2_obstacles
@@ -826,15 +889,15 @@ def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles):
     #Clearance adder must be added on after the voltage adder
     Design_Clearance_CSA10_clearance = CSA_10_clearance + clearance_adder
 
-    #The following is to round all the values before they are sent to the table
-    CSA_10_clearance = np.round(CSA_10_clearance, Numpy_round_integer)
-    Design_Clearance_CSA10_clearance = np.round(Design_Clearance_CSA10_clearance, Numpy_round_integer)
 
     # The next to lines of code is to sort the two arrays into a format that goes: basic, Design_Clearance, basic, Design_Clearance ...etc
     # Stack the two 1D arrays vertically
     stacked_arrays = np.vstack((CSA_10_clearance, Design_Clearance_CSA10_clearance))
     # Flatten the resulting 2D array into a 1D array
     CSA10output = np.ravel(stacked_arrays, order='F')
+
+    #Rounding the values
+    CSA10output = np.char.mod(f'%0.{Numpy_round_integer}f', CSA10output)
 
     #Creating a dictionary to turn into a dataframe
     data = {
@@ -844,14 +907,18 @@ def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles):
         'Voltage range': Voltage_range,
         }
     return data
-CSA10_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
+CSA10_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles',  'Max_Overvoltage']}
 CSA_Table10_data = CSA_table10_clearance(**CSA10_input)
 
 #The following function is for CSA Table 11
-def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
+def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_11 = pd.read_excel(ref_table, "CSA table 11")
 
@@ -894,21 +961,22 @@ def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
     CSA11_Design_Clearance = CSA11_clearance + Buffer_Live
 
     #Rounding
-    CSA11_SupplyEquipment = np.round(CSA11_SupplyEquipment, Numpy_round_integer)
-    CSA11_SupplyEquipment_Design_Clearance = np.round(CSA11_SupplyEquipment_Design_Clearance, Numpy_round_integer)
+    CSA11_SupplyEquipment = np.char.mod(f'%0.{Numpy_round_integer}f', CSA11_SupplyEquipment)
+    CSA11_SupplyEquipment_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA11_SupplyEquipment_Design_Clearance
+                                                         )
+    CSA11_neut_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA11_neut_clearance)
+    CSA11_neut_clearance_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA11_neut_clearance_Design_Clearance)
 
-    CSA11_neut_clearance = np.round(CSA11_neut_clearance, Numpy_round_integer)
-    CSA11_neut_clearance_Design_Clearance = np.round(CSA11_neut_clearance_Design_Clearance, Numpy_round_integer)
+    CSA11_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA11_clearance)
+    CSA11_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA11_Design_Clearance)
 
-    CSA11_clearance = np.round(CSA11_clearance, Numpy_round_integer)
-    CSA11_Design_Clearance = np.round(CSA11_Design_Clearance, Numpy_round_integer)
 
     #Creating the 3 columns that are needed to be outputted to form the dictionary output
     CSA11_A = np.array([CSA11_SupplyEquipment, CSA11_neut_clearance, CSA11_clearance])
     CSA11_A_Design_Clearance = np.array([CSA11_SupplyEquipment_Design_Clearance, CSA11_neut_clearance_Design_Clearance, CSA11_Design_Clearance])
     CSA11_B = np.array([CSA11_SupplyEquipmentB, CSA11_neut_clearanceB, CSA11_clearanceB])
 
-
+    #Creating the dictionary output
     data = {
         'Basic': CSA11_A,
         'Design Clearance': CSA11_A_Design_Clearance,
@@ -917,15 +985,22 @@ def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live):
         'Voltage range': Voltage_range,
         }
     return data
-CSA11_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live"]}
+CSA11_input = {key: inputs[key] for key in ['p2p_voltage', "Buffer_Neut", "Buffer_Live",  'Max_Overvoltage']}
 CSA_Table11_data = CSA_Table_11_clearance(**CSA11_input)
 
 #The following function is for CSA Table 13
-def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Voltage):
+def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Voltage, Max_Overvoltage, Max_Overvoltage_XING):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     XING_voltage = XING_P2P_Voltage / np.sqrt(3)
+    #Adding Voltage Multipliers
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+    XING_voltage = XING_voltage * Voltage_multiplier_XING 
+
+
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_13 = pd.read_excel(ref_table, "CSA table 13")
 
@@ -976,9 +1051,9 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     elif XING_voltage <=220: 
         voltage_range_XING = 'AC < 190 ≤ 220'
     elif voltage <=320: 
-        voltage_range_over = 'AC < 220 ≤ 320'
+        voltage_range_XING = 'AC < 220 ≤ 320'
     elif voltage <=425: 
-        voltage_range_over = 'AC < 320 ≤ 425'
+        voltage_range_XING = 'AC < 320 ≤ 425'
     else: 
         voltage_range_XING = 'AC 0-0.75'
 
@@ -1037,9 +1112,7 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
         CSA13_from_guy_Design_Clearance = np.array(["ERROR Voltage too high", len(CSA13_from_guy_Design_Clearance)])
         CAS13_ac_basic = np.array(["ERROR Voltage too high", len(CAS13_ac_basic)])
         CSA13_from_ac_Design_Clearance = np.array(["ERROR Voltage too high", len(CSA13_from_ac_Design_Clearance)])
-    if voltage > 425:
         voltage_range_over = "ERROR Voltage too high"
-    if XING_voltage > 425:
         voltage_range_XING = "ERROR Voltage too high"
 
     data = {
@@ -1053,14 +1126,17 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
         }
     
     return data
-CSA13_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', "XING_P2P_Voltage"]}
+CSA13_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', "XING_P2P_Voltage", 'Max_Overvoltage', 'Max_Overvoltage_XING']}
 CSA_Table13_data = CSA_Table_13_clearance(**CSA13_input)
 
 #The following function is for CSA Table 14
-def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles):
+def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_14 = pd.read_excel(ref_table, "CSA table 14")
@@ -1123,19 +1199,24 @@ def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles):
         }
     
     return data
-CSA14_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
+CSA14_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'Max_Overvoltage']}
 CSA_Table14_data = CSA_Table_14_clearance(**CSA14_input)
 
 #The following function is for CSA Table 15
-def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Voltage):
+def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Voltage, Max_Overvoltage, Max_Overvoltage_XING):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     voltage_XING = XING_P2P_Voltage / np.sqrt(3)
 
+    #Adding Voltage Multipliers
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+    voltage_XING = voltage_XING * Voltage_multiplier_XING 
+
     comms_voltage = voltage + 0.130
     voltage = voltage + voltage_XING
-    
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_15 = pd.read_excel(ref_table, "CSA table 15")
@@ -1143,7 +1224,6 @@ def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     #This will look a bit different since we'll be finding data based on rows vs. columns.
     #Since .loc is being used to find the row a column must be chosen to use 
     CSA_15.set_index("Sum of voltages of conductors", inplace = True)
-
 
     #Figuring out the correct row name
     if  0 < voltage <= 0.75: 
@@ -1153,7 +1233,6 @@ def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
         voltage_range = '> 750 V'
         CSA15_clearance = CSA_15.loc['> 750 V ac (300 + 10 mm/kV over 750)']
         CSA15_clearance = CSA15_clearance + np.ones(len(CSA15_clearance)) * 10 * (voltage - 0.75)
-
         #Figuring out the correct row name
     if  0 < comms_voltage <= 0.75: 
         voltage_range = '0 – 750 V'
@@ -1189,14 +1268,17 @@ def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
         'Voltage range': voltage_range,
         }
     return data
-CSA15_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'XING_P2P_Voltage']}
+CSA15_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'XING_P2P_Voltage', 'Max_Overvoltage', 'Max_Overvoltage_XING']}
 CSA_Table15_data = CSA_Table_15_clearance(**CSA15_input)
 
 #The following function is for CSA Table 16
-def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
+def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_16 = pd.read_excel(ref_table, "CSA table 16")
@@ -1268,14 +1350,17 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles):
         'Voltage range': voltage_range,
         }
     return data
-CSA16_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles']}
+CSA16_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'Max_Overvoltage']}
 CSA_Table16_data = CSA_Table_16_clearance(**CSA16_input)
 
 #The following function is for CSA Table 17
-def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, Final_Unloaded_Sag_15C):
+def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, Final_Unloaded_Sag_15C, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_17 = pd.read_excel(ref_table, "CSA table 17")
@@ -1357,11 +1442,11 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         'Span Range': Span_Range
         }
     return data
-CSA17_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'Span_Length', 'Final_Unloaded_Sag_15C']}
+CSA17_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_buffer_2_obstacles', 'Span_Length', 'Final_Unloaded_Sag_15C', 'Max_Overvoltage']}
 CSA_Table17_data = CSA_Table_17_clearance(**CSA17_input)
 
 #The following function is for CSA Table 18
-def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage, Is_main_wire_upper):
+def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage, Is_main_wire_upper, Max_Overvoltage, Max_Overvoltage_XING):
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_18 = pd.read_excel(ref_table, "CSA table 18")
@@ -1369,14 +1454,24 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     #Index being set so that row can be found using name
     CSA_18.set_index("Conductors at lower level", inplace = True)
 
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+
     if Is_main_wire_upper == True:
         #Getting Phase to ground voltage if main wire is upper wire
         voltage = p2p_voltage / np.sqrt(3)
+        voltage = voltage * Voltage_multiplier
+
         under_voltage = XING_P2P_Voltage / np.sqrt(3)
+        under_voltage = under_voltage * Voltage_multiplier_XING 
     else:
         #Getting Phase to ground voltage if main wire is lower wire
         under_voltage = p2p_voltage / np.sqrt(3)
+        under_voltage = under_voltage * Voltage_multiplier_XING 
+
         voltage = XING_P2P_Voltage / np.sqrt(3)
+        voltage = voltage * Voltage_multiplier
 
     #From the way this table works a specfific cell must be selected using row and column the following if else statements will pick the proper row and column
 
@@ -1446,14 +1541,17 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
         }
     
     return data
-CSA18_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage", 'Is_main_wire_upper']}
+CSA18_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage", 'Is_main_wire_upper', 'Max_Overvoltage', 'Max_Overvoltage_XING']}
 CSA_Table18_data = CSA_Table_18_clearance(**CSA18_input)
 
 #The following function is for CSA Table 20
-def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_20 = pd.read_excel(ref_table, "CSA table 20")
@@ -1497,11 +1595,11 @@ def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         'Voltage range': voltage_range
         }
     return data
-CSA20_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA20_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', 'Max_Overvoltage']}
 CSA_Table20_data = CSA_Table_20_clearance(**CSA20_input)
 
 #The following function is for CSA Table 21
-def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage, Is_main_wire_upper):
+def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_Voltage, Is_main_wire_upper, Max_Overvoltage, Max_Overvoltage_XING):
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_21 = pd.read_excel(ref_table, "CSA table 21")
@@ -1509,14 +1607,24 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     #Index being set so that row can be found using name
     CSA_21.set_index("Maximum lower conductor line-to-ground voltage, kV", inplace = True)
 
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+
     if Is_main_wire_upper == True:
         #Getting Phase to ground voltage if main wire is upper wire
         voltage = p2p_voltage / np.sqrt(3)
+        voltage = voltage * Voltage_multiplier
+
         under_voltage = XING_P2P_Voltage / np.sqrt(3)
+        under_voltage = under_voltage * Voltage_multiplier_XING 
     else:
         #Getting Phase to ground voltage if main wire is lower wire
         under_voltage = p2p_voltage / np.sqrt(3)
+        under_voltage = under_voltage * Voltage_multiplier_XING 
+
         voltage = XING_P2P_Voltage / np.sqrt(3)
+        voltage = voltage * Voltage_multiplier
 
     #From the way this table works a specfific cell must be selected using row and column the following if else statements will pick the proper row and column
 
@@ -1576,14 +1684,17 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
         }
     
     return data
-CSA21_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage", 'Is_main_wire_upper']}
+CSA21_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', "XING_P2P_Voltage", 'Is_main_wire_upper', 'Max_Overvoltage', 'Max_Overvoltage_XING']}
 CSA_Table21_data = CSA_Table_21_clearance(**CSA21_input)
 
 #The following function is for CSA Table 22
-def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_22 = pd.read_excel(ref_table, "CSA table 22")
@@ -1643,14 +1754,17 @@ def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         'Voltage range': voltage_range
         }
     return data
-CSA22_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA22_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', 'Max_Overvoltage']}
 CSA_Table22_data = CSA_Table_22_clearance(**CSA22_input)
 
 #The following function is for CSA Table 23
-def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_23 = pd.read_excel(ref_table, "CSA table 23")
@@ -1743,14 +1857,17 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         'Voltage range': voltage_range
         }
     return data
-CSA23_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA23_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', 'Max_Overvoltage']}
 CSA_Table23_data = CSA_Table_23_clearance(**CSA23_input)
 
 #The following function is for CSA Table 24
-def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_24 = pd.read_excel(ref_table, "CSA table 24")
@@ -1794,14 +1911,17 @@ def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         'Voltage range': voltage_range
         }
     return data
-CSA24_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA24_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', 'Max_Overvoltage']}
 CSA_Table24_data = CSA_Table_24_clearance(**CSA24_input)
 
 #The following function is for CSA Table 25
-def CSA_Table_25_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+def CSA_Table_25_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_25 = pd.read_excel(ref_table, "CSA table 25")
@@ -1836,14 +1956,17 @@ def CSA_Table_25_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         'Voltage range': voltage_range
         }
     return data
-CSA25_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA25_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', 'Max_Overvoltage']}
 CSA_Table25_data = CSA_Table_25_clearance(**CSA25_input)
 
 #The following function is for CSA Table 26
-def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure):
+def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvoltage):
 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
+    #Adding Voltage Multiplier
+    Voltage_multiplier = Max_Overvoltage/100
+    voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
     CSA_26 = pd.read_excel(ref_table, "CSA table 26")
@@ -1940,7 +2063,7 @@ def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure):
         'Voltage range': voltage_range
         }
     return data
-CSA26_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure']}
+CSA26_input = {key: inputs[key] for key in ['p2p_voltage', 'Design_Buffer_Same_Structure', 'Max_Overvoltage']}
 CSA_Table26_data = CSA_Table_26_clearance(**CSA26_input)
 
 #The following function will create worksheets from the data calculated by the functions above
@@ -2014,7 +2137,7 @@ def create_report_excel():
         'range_font_bold' : [(1, 1, 2, 1)],
         'range_color': list_range_color_AEUC_5,
         'range_border': [(1, 1, 1, n_column_AEUC_table_5), (2, 1, n_row_AEUC_table_5, n_column_AEUC_table_5)],
-        'row_height': [(1, 50)],
+        'row_height': [(1, 50)]+[(4, 20)]+[(5, 20)],
         'column_width': [(1, 30)] + [(i + 2, 10) for i in range(n_column_AEUC_table_5)],
     }
 
@@ -2305,7 +2428,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA5 = []
     for i in range(n_row_CSA_table_5):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA5.append((i + 1, 1, i + 1, n_column_CSA_table_5, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA5.append((i + 1, 1, i + 1, n_column_CSA_table_5, color_bkg_data_1))
@@ -2377,7 +2500,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA6 = []
     for i in range(n_row_CSA_table_6):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA6.append((i + 1, 1, i + 1, n_column_CSA_table_6, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA6.append((i + 1, 1, i + 1, n_column_CSA_table_6, color_bkg_data_1))
@@ -2444,7 +2567,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA7 = []
     for i in range(n_row_CSA_table_7):
-        if i < 3:
+        if i < 5:
             list_range_color_CSA7.append((i + 1, 1, i + 1, n_column_CSA_table_7, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA7.append((i + 1, 1, i + 1, n_column_CSA_table_7, color_bkg_data_1))
@@ -2524,7 +2647,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA9 = []
     for i in range(n_row_CSA_table_9):
-        if i < 3:
+        if i < 7:
             list_range_color_CSA9.append((i + 1, 1, i + 1, n_column_CSA_table_9, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA9.append((i + 1, 1, i + 1, n_column_CSA_table_9, color_bkg_data_1))
@@ -2595,7 +2718,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA10 = []
     for i in range(n_row_CSA_table_10):
-        if i < 3:
+        if i < 9:
             list_range_color_CSA10.append((i + 1, 1, i + 1, n_column_CSA_table_10, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA10.append((i + 1, 1, i + 1, n_column_CSA_table_10, color_bkg_data_1))
@@ -2670,7 +2793,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA11 = []
     for i in range(n_row_CSA_table_11):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA11.append((i + 1, 1, i + 1, n_column_CSA_table_11, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA11.append((i + 1, 1, i + 1, n_column_CSA_table_11, color_bkg_data_1))
@@ -2691,7 +2814,7 @@ def create_report_excel():
     # define some footer notes
     footer_CSA11 = ['Voltages are rms line-to-ground.',
                    'See Figure 1 for an illustration of swimming pool clearance limits.', 
-                   '*Supply conductors freater than 150 kV shall not cross over swimming pools or be closer to the edge of a pool than 8.0m + 0.01m/kV above 150 kV',
+                   '*Supply conductors greater than 150 kV shall not cross over swimming pools or be closer to the edge of a pool than 8.0m + 0.01m/kV above 150 kV',
                    ]
 
     # define the worksheet
@@ -2734,7 +2857,7 @@ def create_report_excel():
         [' '],
         ['Type of line wire, cable, or other plant being crossed over', ' ', 'Line wire or cable at upper level, minimum clearance, m'],
         [' ', ' ', '(line to ground voltage:' + str(XING_voltage) + ' kV)'],
-        [' ', ' ', 'Guys, span wires, aerial grounding conductors, and communication wires and cables', ' ', 'Open supply-line conductors and service wires, ac,' + str(voltage_range_XING) +' kV'],
+        [' ', ' ', 'Guys, span wires, aerial grounding conductors, and communication wires and cables', ' ', 'Open supply-line conductors and service wires, ac, ' + str(voltage_range_XING) +' kV'],
         ['(line to ground voltage ' + str(line2ground_voltage) + ' kV)', ' ', 'Basic', 'Design Clearance', 'Basic', 'Design Clearance'],
               ]
     
@@ -2752,7 +2875,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA13 = []
     for i in range(n_row_CSA_table_13):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA13.append((i + 1, 1, i + 1, n_column_CSA_table_13, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA13.append((i + 1, 1, i + 1, n_column_CSA_table_13, color_bkg_data_1))
