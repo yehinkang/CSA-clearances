@@ -1183,11 +1183,11 @@ def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvolta
     CSA14_neut_Design_Clearance = CSA_14_neut_clearance + buffer_array
 
     #Rounding
-    CSA14_clearance = np.round(CSA14_clearance, Numpy_round_integer)
-    CSA_14_neut_clearance = np.round(CSA_14_neut_clearance, Numpy_round_integer)
+    CSA14_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA14_clearance)
+    CSA_14_neut_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_14_neut_clearance)
 
-    CSA14_Design_Clearance = np.round(CSA14_Design_Clearance, Numpy_round_integer)
-    CSA14_neut_Design_Clearance = np.round(CSA14_neut_Design_Clearance, Numpy_round_integer)
+    CSA14_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA14_Design_Clearance)
+    CSA14_neut_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA14_neut_Design_Clearance)
 
     data = {
         'Basic guy': CSA_14_neut_clearance,
@@ -1251,11 +1251,11 @@ def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     CSA15_Comms_Design_Clearance = CSA15_Comms + buffer_array
 
     #Rounding
-    CSA15_clearance = np.round(CSA15_clearance, Numpy_round_integer)
-    CSA15_Comms = np.round(CSA15_Comms, Numpy_round_integer)
+    CSA15_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA15_clearance)
+    CSA15_Comms = np.char.mod(f'%0.{Numpy_round_integer}f', CSA15_Comms)
 
-    CSA15_Design_Clearance = np.round(CSA15_Design_Clearance, Numpy_round_integer)
-    CSA15_Comms_Design_Clearance = np.round(CSA15_Comms_Design_Clearance, Numpy_round_integer)
+    CSA15_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA15_Design_Clearance)
+    CSA15_Comms_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA15_Comms_Design_Clearance)
 
     #Creating the arrays that will be the columns in the spreadsheet, the position has to be specified since these are arrays of len (1) o/w would give brackets around values in table
     Basic_clearance_array = np.array([CSA15_clearance[0], CSA15_Comms[0]])
@@ -1378,8 +1378,8 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA_17.loc['0-5 kV ac 0 - 6 m'][0]
         #Creating design buffer array to add onto clearance
         CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
-        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
+        CSA17_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_clearance)
+        CSA17_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_Design_Clearance)
 
     elif 0 < voltage <= 5 and Span_Length <= 50: 
         #Voltage range and span length range to print on the spreadsheet
@@ -1388,8 +1388,8 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA_17.loc['0-5 kV ac > 6 < 50 m'][0]
         #Creating design buffer array to add onto clearance
         CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
-        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
+        CSA17_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_clearance)
+        CSA17_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_Design_Clearance)
 
     elif 0 < voltage <= 5 and Span_Length > 50 : 
         #Voltage range and span length range to print on the spreadsheet
@@ -1399,8 +1399,8 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA17_clearance + (3*(Span_Length - 50)) + (83*(Final_Unloaded_Sag_15C))
         #Creating design buffer array to add onto clearance
         CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
-        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
+        CSA17_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_clearance)
+        CSA17_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_Design_Clearance)
 
     elif voltage > 5 and Span_Length <= 50: 
         #Voltage range and span length range to print on the spreadsheet
@@ -1410,8 +1410,8 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA17_clearance + 10 * (voltage - 1)
         #Creating design buffer array to add onto clearance
         CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
-        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
+        CSA17_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_clearance)
+        CSA17_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_Design_Clearance)
 
     elif voltage > 5 and Span_Length <= 450: 
         #Voltage range and span length range to print on the spreadsheet
@@ -1421,8 +1421,8 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
         CSA17_clearance = CSA17_clearance + (3*(Span_Length - 50)) + (83*(Final_Unloaded_Sag_15C)) + (10*(voltage-5))
         #Creating design buffer array to add onto clearance
         CSA17_Design_Clearance = CSA17_clearance + Design_buffer_2_obstacles * float(1000)
-        CSA17_clearance = np.round(CSA17_clearance, Numpy_round_integer)
-        CSA17_Design_Clearance = np.round(CSA17_Design_Clearance, Numpy_round_integer)
+        CSA17_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_clearance)
+        CSA17_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA17_Design_Clearance)
 
     else:
         #Voltage range and span length range to print on the spreadsheet
@@ -1512,11 +1512,13 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     #Figuring out if the number has any symbols attached to it
     #If there are symbols they will be removed so addition can be done and then added back in
     if isinstance(CSA18_clearance, int):
-        CSA18_clearance = np.round(CSA18_clearance, Numpy_round_integer)
         CSA18_Design_Clearance = CSA18_clearance + Design_Buffer_Same_Structure
+        CSA18_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA18_clearance)
+        CSA18_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA18_Design_Clearance)
     elif isinstance(CSA18_clearance, float):
-        CSA18_clearance = np.round(CSA18_clearance, Numpy_round_integer)
         CSA18_Design_Clearance = CSA18_clearance + Design_Buffer_Same_Structure
+        CSA18_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA18_clearance)
+        CSA18_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA18_Design_Clearance)
     elif isinstance(CSA18_clearance, str):
         num = float(CSA18_clearance.rstrip('*†‡'))
         num = np.round(num, Numpy_round_integer)
