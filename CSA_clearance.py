@@ -1,11 +1,11 @@
 """ 
 BREAKDOWN OF HOW THE CSA CLEARANCES PYTHON SCRIPT WORKS:
-This code takes inputs in a dictionary
-This dictionary is then used to input the code into different functions (1 function per table)
-The functions then call back to a spreadsheet referenceed locally using pandas, each sheet in this spreadsheet corresponds to a CSA table
-From there the functions perform necessary operations and then spit out a dictionary that can then be exported to a webserver
-These dictionaries are also used to put together an excel file using the report_xlsx_general script
-This file is then saved locally to a selected folder
+1.	The script will import a locally referenced excel file using pandas. This spreadsheet has dedicated sheets for each function.
+2.	Inputs are fed into the script through a dictionary named inputs(currently this is hard coded at the start of the script).
+3.	There is a function for each table. These functions will take the inputs needed from inputs and lookup values in the tables and perform operations on the values acquired.
+4.	From there each function has an output that is a dictionary.
+5.	The dictionary is then used to fill out a spreadsheet that has been stylised using the “report_xlsx_general” script
+6.	These sheets are then exported to a spreadsheet with a unique name based on the time it was created, whcich is saved locally
 """
 
 #importing the following packages
@@ -18,13 +18,13 @@ import sys
 #The following is referenced locally commons is a file and report_xlsx_general is another python script
 from commons import report_xlsx_general
 
-#The following is being used to see full arrays being printed out in the terminal instead of [a, b, c, ..., z], this is mostly for troubleshooting
-np.set_printoptions(threshold=sys.maxsize)
-
 #This is the full filepath for the reference spreadsheet
 ref_table_filepath = r"C:\Users\yekang\OneDrive - POWER Engineers, Inc\Desktop\Python Stuff\Clearance Calcs\CSA-clearances\AEUC_CSA_clearances.xlsx"
 #This uses pandas to load in the excel file
 ref_table= pd.ExcelFile(ref_table_filepath)
+
+#The following is being used to see full arrays being printed out in the terminal instead of [a, b, c, ..., z], this is mostly for troubleshooting
+np.set_printoptions(threshold=sys.maxsize)
 
 #This is the input dictionary that all functions will use
 inputs = {
