@@ -9,7 +9,7 @@ This file is then saved locally to a selected folder
 """
 
 #importing the following packages
-import os, math, json, copy, re
+import re
 from datetime import datetime
 import pandas as pd
 import numpy as np
@@ -161,7 +161,7 @@ def AEUC_table5_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage
     voltage = p2p_voltage / np.sqrt(3)
 
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for AEUC Table 5 within the reference table file
@@ -293,7 +293,7 @@ def AEUC_table7_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvoltag
     #Getting phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for AEUC Table 7 within the reference table file
@@ -400,7 +400,7 @@ def CSA_Table_2_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage
     #Adding the voltage multiplier
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 2 within the reference table file
@@ -547,7 +547,7 @@ def CSA_Table_3_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -618,7 +618,7 @@ def CSA_Table_5_clearance(p2p_voltage, Buffer_Live, Max_Overvoltage):
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 5 within the reference table file
@@ -674,7 +674,7 @@ def CSA_Table_6_clearance(p2p_voltage, Buffer_Neut, Max_Overvoltage):
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -776,7 +776,7 @@ def CSA_Table_9_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltage
     #Point to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 9 within the reference table file
@@ -846,7 +846,7 @@ def CSA_table10_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvoltag
     #Getting Phase to Ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA table 10 within the reference table file
@@ -916,7 +916,7 @@ def CSA_Table_11_clearance(p2p_voltage, Buffer_Neut, Buffer_Live, Max_Overvoltag
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -995,9 +995,9 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     voltage = p2p_voltage / np.sqrt(3)
     XING_voltage = XING_P2P_Voltage / np.sqrt(3)
     #Adding Voltage Multipliers
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
-    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100 + 1
     XING_voltage = XING_voltage * Voltage_multiplier_XING 
 
 
@@ -1084,36 +1084,24 @@ def CSA_Table_13_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     CSA13_from_ac_Design_Clearance = CAS13_ac_basic + buffer_array
 
     #Rounding
-    CAS13_guy_basic = np.round(CAS13_guy_basic, Numpy_round_integer)
-    CAS13_ac_basic = np.round(CAS13_ac_basic, Numpy_round_integer)
+    CAS13_guy_basic = np.char.mod(f'%0.{Numpy_round_integer}f', CAS13_guy_basic)
+    CAS13_ac_basic = np.char.mod(f'%0.{Numpy_round_integer}f', CAS13_ac_basic)
 
-    CSA13_from_guy_Design_Clearance = np.round(CSA13_from_guy_Design_Clearance, Numpy_round_integer)
-    CSA13_from_ac_Design_Clearance = np.round(CSA13_from_ac_Design_Clearance, Numpy_round_integer)
-
-    XING_voltage = np.round(XING_voltage, Numpy_round_integer)
-    voltage = np.round(voltage, Numpy_round_integer)
-
-    #trying to replace the nan value with a string that is "-"
-    if np.isnan(CAS13_guy_basic[2]):
-        CAS13_guy_basic[2] = "-"
-
-    if np.isnan(CSA13_from_guy_Design_Clearance[2]):
-        CSA13_from_guy_Design_Clearance[2] = "-"
-
-    if np.isnan(CAS13_ac_basic[2]):
-        CAS13_ac_basic[2] = "-"
-
-    if np.isnan(CSA13_from_ac_Design_Clearance[2]):
-        CSA13_from_ac_Design_Clearance[2] = "-"
+    CSA13_from_guy_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA13_from_guy_Design_Clearance)
+    CSA13_from_ac_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA13_from_ac_Design_Clearance)
 
     #incase of over voltage
     if voltage > 425 or XING_voltage > 425:
-        CAS13_guy_basic = np.array(["ERROR Voltage too high", len(CAS13_guy_basic)])
-        CSA13_from_guy_Design_Clearance = np.array(["ERROR Voltage too high", len(CSA13_from_guy_Design_Clearance)])
-        CAS13_ac_basic = np.array(["ERROR Voltage too high", len(CAS13_ac_basic)])
-        CSA13_from_ac_Design_Clearance = np.array(["ERROR Voltage too high", len(CSA13_from_ac_Design_Clearance)])
+        CAS13_guy_basic = np.full((3,), "ERROR voltage too high")
+        CSA13_from_guy_Design_Clearance = np.full((3,), "ERROR voltage too high")
+        CAS13_ac_basic = np.full((3,), "ERROR voltage too high")
+        CSA13_from_ac_Design_Clearance = np.full((3,), "ERROR voltage too high")
         voltage_range_over = "ERROR Voltage too high"
         voltage_range_XING = "ERROR Voltage too high"
+
+    #Rounding the voltage after the overvoltage function
+    XING_voltage = np.char.mod(f'%0.{Numpy_round_integer}f', XING_voltage)
+    voltage = np.char.mod(f'%0.{Numpy_round_integer}f', voltage)
 
     data = {
         'Basic guy': CAS13_guy_basic,
@@ -1135,7 +1123,7 @@ def CSA_Table_14_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvolta
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1210,9 +1198,9 @@ def CSA_Table_15_clearance(p2p_voltage, Design_buffer_2_obstacles, XING_P2P_Volt
     voltage_XING = XING_P2P_Voltage / np.sqrt(3)
 
     #Adding Voltage Multipliers
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
-    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100 + 1
     voltage_XING = voltage_XING * Voltage_multiplier_XING 
 
     comms_voltage = voltage + 0.130
@@ -1277,7 +1265,7 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvolta
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1333,15 +1321,22 @@ def CSA_Table_16_clearance(p2p_voltage, Design_buffer_2_obstacles, Max_Overvolta
         text = ''
 
     #Rounding
-    CSA16_clearance = np.round(CSA16_clearance, Numpy_round_integer)
-    CSA16_Design_Clearance = np.round(CSA16_Design_Clearance, Numpy_round_integer)
+    Basic_num = np.char.mod(f'%0.{Numpy_round_integer}f', CSA16_clearance[0])
+    Basic_neut = np.char.mod(f'%0.{Numpy_round_integer}f', CSA16_clearance_neut[0])
 
-    Basic_annotated = str(CSA16_clearance[0]) + text
-    Basic_neut_annotated = str(CSA16_clearance_neut[0]) + text_neut
+    DC = np.char.mod(f'%0.{Numpy_round_integer}f', CSA16_Design_Clearance[0])
+    neut_DC = np.char.mod(f'%0.{Numpy_round_integer}f', CSA16_clearance_neut_Design_Clearance[0])
+
+    #Adding text to values that require it
+    Basic_annotated = str(Basic_num) + text
+    Basic_neut_annotated = str(Basic_neut) + text_neut
+
+    DC_annotated = str(DC) + text
+    DC_neut_annotated = str(neut_DC) + text_neut
 
     #Creating the arrays that will be shown in the columns of the spreadsheet
     Basic = np.array([Basic_annotated, Basic_neut_annotated])
-    Design_Clearance = np.array([float(CSA16_Design_Clearance), float(CSA16_clearance_neut_Design_Clearance)])
+    Design_Clearance = np.array([DC_annotated, DC_neut_annotated])
 
     data = {
         'Basic': Basic,
@@ -1359,7 +1354,7 @@ def CSA_Table_17_clearance(p2p_voltage, Design_buffer_2_obstacles, Span_Length, 
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1455,8 +1450,8 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     CSA_18.set_index("Conductors at lower level", inplace = True)
 
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
-    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100 + 1
 
     if Is_main_wire_upper == True:
         #Getting Phase to ground voltage if main wire is upper wire
@@ -1521,16 +1516,19 @@ def CSA_Table_18_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
         CSA18_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA18_Design_Clearance)
     elif isinstance(CSA18_clearance, str):
         num = float(CSA18_clearance.rstrip('*†‡'))
-        num = np.round(num, Numpy_round_integer)
+        num = np.char.mod(f'%0.{Numpy_round_integer}f', num)
+        Design_Buffer_Same_Structure = np.char.mod(f'%0.{Numpy_round_integer}f', Design_Buffer_Same_Structure)
         CSA18_Design_Clearance = f"{num + Design_Buffer_Same_Structure}{CSA18_clearance[len(str(int(num))):]}"
         CSA18_clearance = f'{num}{CSA18_clearance[len(str(int(num))):]}'
 
     #Error message incase the voltage below is highe rthan the one above
-    if voltage_range_lower > voltage_range_over:
+    if under_voltage > voltage:
         CSA18_clearance = "Error higher voltage below lower voltage"
         CSA18_Design_Clearance = "Error higher voltage below lower voltage"
-    elif CSA18_clearance == 0:
-        CSA18_Design_Clearance = 0
+    
+    if under_voltage or voltage > 90:
+        CSA18_clearance = "Error one or both of the voltages entered are too high"
+        CSA18_Design_Clearance = "Error one or both of the voltages entered are too high"
         voltage_range_over = "Error one or both of the voltages entered are too high"
         voltage_range_lower = "Error one or both of the voltages entered are too high"
 
@@ -1552,7 +1550,7 @@ def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1587,12 +1585,19 @@ def CSA_Table_20_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
 
     CSA20_Design_Clearance = CSA20_clearance + np.ones(len(CSA20_clearance)) * Design_Buffer_Same_Structure * 1000
     #Creating the arrays that will be shown in the columns of the spreadsheet
-    data = {
-        'Basic': CSA20_clearance[0],
-        'Design_Clearance': CSA20_Design_Clearance[0],
 
-        'Between conductors': CSA20_clearance[1],
-        'Between conductors Design_Clearance': CSA20_Design_Clearance[1],
+    #Adding rounding
+    Basic = np.char.mod(f'%0.{Numpy_round_integer}f', CSA20_clearance[0])
+    Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA20_Design_Clearance[0])
+    Between_Conductors = np.char.mod(f'%0.{Numpy_round_integer}f', CSA20_clearance[1])
+    Between_Conductors_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA20_Design_Clearance[1])
+
+    data = {
+        'Basic': Basic,
+        'Design_Clearance': Design_Clearance,
+
+        'Between conductors': Between_Conductors,
+        'Between conductors Design_Clearance': Between_Conductors_Design_Clearance,
 
         'Voltage range': voltage_range
         }
@@ -1610,8 +1615,8 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     CSA_21.set_index("Maximum lower conductor line-to-ground voltage, kV", inplace = True)
 
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
-    Voltage_multiplier_XING = Max_Overvoltage_XING/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
+    Voltage_multiplier_XING = Max_Overvoltage_XING/100 + 1
 
     if Is_main_wire_upper == True:
         #Getting Phase to ground voltage if main wire is upper wire
@@ -1627,7 +1632,7 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
 
         voltage = XING_P2P_Voltage / np.sqrt(3)
         voltage = voltage * Voltage_multiplier
-
+    
     #From the way this table works a specfific cell must be selected using row and column the following if else statements will pick the proper row and column
 
     #Figuring out the correct row name
@@ -1669,13 +1674,19 @@ def CSA_Table_21_clearance(p2p_voltage, Design_Buffer_Same_Structure, XING_P2P_V
     CSA21_Design_Clearance = float(CSA21_clearance) + Design_Buffer_Same_Structure
 
     #Rounding
-    CSA21_clearance = np.round(CSA21_clearance, Numpy_round_integer)
-    CSA21_Design_Clearance = np.round(CSA21_Design_Clearance, Numpy_round_integer)
+    CSA21_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA21_clearance)
+    CSA21_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA21_Design_Clearance)
 
     #Error message incase the voltage below is highe rthan the one above
     if voltage_range_lower > voltage_range_over:
         CSA21_clearance = "Error higher voltage below lower voltage"
         CSA21_Design_Clearance = "Error higher voltage below lower voltage"
+    
+    if voltage > 90:
+        CSA21_clearance = "Out of Range"
+        CSA21_Design_Clearance = "Out of Range"
+        voltage_range_over = "Out of Range"
+        voltage_range_lower = "Out of Range"
 
     data = {
         'Basic': CSA21_clearance,
@@ -1695,7 +1706,7 @@ def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1719,16 +1730,51 @@ def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
         voltage_range = '> 50 kV'
 
     #Defining an array that will contain the design clearance
+    CSA22_clearance_rounded = []
+
+    #For loop round values in CSA_22 clearance
+    for item in CSA22_clearance:
+        #First checks if value is an integer and if so adds the clearance
+        if isinstance(item, int):
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', item)
+            CSA22_clearance_rounded.append(val)
+        #Then checks if value is a float and if so adds the clearance
+        elif isinstance(item, float):
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', item)
+            CSA22_clearance_rounded.append(val)
+        #If the value is a string it will search trough the string for integers or floats
+        elif isinstance(item, str):
+            match = re.search(r'\d+(\.\d+)?', item)
+            #if a number is found in the string it will take the number out and add onto that number and then return a new number
+            if match:
+                num = float(match.group())
+                new_num = num
+                new_num = np.char.mod(f'%0.{Numpy_round_integer}f', new_num)
+                new_item = item[:match.start()] + str(new_num) + item[match.end():]
+                #This new number is then appended to the array
+                CSA22_clearance_rounded.append(new_item)
+            #If no number is found the original string passes through into the new array
+            else:
+                CSA22_clearance_rounded.append(item)
+        #If there is something that is not a string, float or integer it will pass into the new array unchanged
+        else:
+            CSA22_clearance_rounded.append(item)
+
+    #Defining an array that will contain the design clearance
     CSA_22_Design_Clearance = []
 
     #For loop to add clearance onto Table 22 values regardless of if there are symbols on the number
     for item in CSA22_clearance:
         #First checks if value is an integer and if so adds the clearance
         if isinstance(item, int):
-            CSA_22_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_22_Design_Clearance.append(val)
         #Then checks if value is a float and if so adds the clearance
         elif isinstance(item, float):
-            CSA_22_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_22_Design_Clearance.append(item + val)
         #If the value is a string it will search trough the string for integers or floats
         elif isinstance(item, str):
             match = re.search(r'\d+(\.\d+)?', item)
@@ -1736,6 +1782,7 @@ def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
             if match:
                 num = float(match.group())
                 new_num = num + Design_Buffer_Same_Structure
+                new_num = np.char.mod(f'%0.{Numpy_round_integer}f', new_num)
                 new_item = item[:match.start()] + str(new_num) + item[match.end():]
                 #This new number is then appended to the array
                 CSA_22_Design_Clearance.append(new_item)
@@ -1748,9 +1795,8 @@ def CSA_Table_22_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
 
     CSA_22_Design_Clearance = np.array(CSA_22_Design_Clearance)
 
-
     data = {
-        'Basic': CSA22_clearance,
+        'Basic': CSA22_clearance_rounded,
         'Design_Clearance': CSA_22_Design_Clearance,
 
         'Voltage range': voltage_range
@@ -1765,7 +1811,7 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1797,10 +1843,14 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     for item in CSA23_clearance:
         #First checks if value is an integer and if so adds the clearance
         if isinstance(item, int):
-            CSA23_clearance_basic.append(item + voltage_adder)
+            val = item + voltage_adder
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA23_clearance_basic.append(val)
         #Then checks if value is a float and if so adds the clearance
         elif isinstance(item, float):
-            CSA23_clearance_basic.append(item + voltage_adder)
+            val = item + voltage_adder
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA23_clearance_basic.append(val)
         #If the value is a string it will search trough the string for integers or floats
         elif isinstance(item, str):
             match = re.search(r'\d+(\.\d+)?', item)
@@ -1808,6 +1858,7 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
             if match:
                 num = float(match.group())
                 new_num = num + voltage_adder
+                new_num = np.char.mod(f'%0.{Numpy_round_integer}f', new_num)
                 new_item = item[:match.start()] + str(new_num) + item[match.end():]
                 #This new number is then appended to the array
                 CSA23_clearance_basic.append(new_item)
@@ -1828,10 +1879,14 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     for item in CSA23_clearance_basic:
         #First checks if value is an integer and if so adds the clearance
         if isinstance(item, int):
-            CSA_23_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_23_Design_Clearance.append(val)
         #Then checks if value is a float and if so adds the clearance
         elif isinstance(item, float):
-            CSA_23_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_23_Design_Clearance.append(val)
         #If the value is a string it will search trough the string for integers or floats
         elif isinstance(item, str):
             match = re.search(r'\d+(\.\d+)?', item)
@@ -1839,6 +1894,7 @@ def CSA_Table_23_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
             if match:
                 num = float(match.group())
                 new_num = num + Design_Buffer_Same_Structure
+                new_num = np.char.mod(f'%0.{Numpy_round_integer}f', new_num)
                 new_item = item[:match.start()] + str(new_num) + item[match.end():]
                 #This new number is then appended to the array
                 CSA_23_Design_Clearance.append(new_item)
@@ -1868,7 +1924,7 @@ def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1906,6 +1962,14 @@ def CSA_Table_24_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
         num = float(CSA_24_Design_Clearance.rstrip('*†‡'))
         CSA_24_Design_Clearance = f"{num + Design_Buffer_Same_Structure}{CSA24_clearance[len(str(int(num))):]}"
 
+    CSA24_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA24_clearance)
+    CSA_24_Design_Clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_24_Design_Clearance)
+
+    if voltage > 250:
+        CSA24_clearance = "Out of Range"
+        CSA_24_Design_Clearance = "Out of Range"
+        voltage_range = "Out of Range"
+
     data = {
         'Basic': CSA24_clearance,
         'Design_Clearance': CSA_24_Design_Clearance,
@@ -1922,7 +1986,7 @@ def CSA_Table_25_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -1947,12 +2011,26 @@ def CSA_Table_25_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
         CSA25_clearance = np.round(CSA25_clearance.astype(float), Numpy_round_integer)
         voltage_range = '> 22 kV'
 
+    #Getting Basic design clearance array
     Basic_clearances = np.array([CSA_25_comms, CSA25_clearance, CSA_25_guy])
     Design_clearances = Basic_clearances + (np.ones(len(Basic_clearances)) * Design_Buffer_Same_Structure)
 
+    #Making an array and a for loop for rounding CSA table 25 DC values
+    CSA_25_Design_Clearance = []
+
+    for item in Design_clearances:
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', item)
+            CSA_25_Design_Clearance.append(val)
+
+    #Now redefining the basic clearances (just rounded)
+    CSA_25_comms = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_25_comms)
+    CSA25_clearance = np.char.mod(f'%0.{Numpy_round_integer}f', CSA25_clearance)
+    CSA_25_guy = np.char.mod(f'%0.{Numpy_round_integer}f', CSA_25_guy)
+    Basic_clearances = np.array([CSA_25_comms, CSA25_clearance, CSA_25_guy])
+
     data = {
         'Basic': Basic_clearances,
-        'Design_Clearance': Design_clearances,
+        'Design_Clearance': CSA_25_Design_Clearance,
 
 
         'Voltage range': voltage_range
@@ -1967,7 +2045,7 @@ def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     #Getting Phase to ground voltage
     voltage = p2p_voltage / np.sqrt(3)
     #Adding Voltage Multiplier
-    Voltage_multiplier = Max_Overvoltage/100
+    Voltage_multiplier = Max_Overvoltage/100 + 1
     voltage = voltage * Voltage_multiplier
 
     #Start by opening the sheet for CSA Table 3 within the reference table file
@@ -2005,10 +2083,14 @@ def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     for item in CSA_26_comms:
         #First checks if value is an integer and if so adds the clearance
         if isinstance(item, int):
-            CSA_26_Design_Clearance_Comms.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_26_Design_Clearance_Comms.append(val)
         #Then checks if value is a float and if so adds the clearance
         elif isinstance(item, float):
-            CSA_26_Design_Clearance_Comms.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_26_Design_Clearance_Comms.append(val)
         #If the value is a string it will search trough the string for integers or floats
         elif isinstance(item, str):
             match = re.search(r'\d+(\.\d+)?', item)
@@ -2016,6 +2098,7 @@ def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
             if match:
                 num = float(match.group())
                 new_num = num + Design_Buffer_Same_Structure
+                new_num = np.char.mod(f'%0.{Numpy_round_integer}f', new_num)
                 new_item = item[:match.start()] + str(new_num) + item[match.end():]
                 #This new number is then appended to the array
                 CSA_26_Design_Clearance_Comms.append(new_item)
@@ -2032,10 +2115,14 @@ def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
     for item in CSA26_clearance:
         #First checks if value is an integer and if so adds the clearance
         if isinstance(item, int):
-            CSA_26_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_26_Design_Clearance.append(val)
         #Then checks if value is a float and if so adds the clearance
         elif isinstance(item, float):
-            CSA_26_Design_Clearance.append(item + Design_Buffer_Same_Structure)
+            val = item + Design_Buffer_Same_Structure
+            val = np.char.mod(f'%0.{Numpy_round_integer}f', val)
+            CSA_26_Design_Clearance.append(val)
         #If the value is a string it will search trough the string for integers or floats
         elif isinstance(item, str):
             match = re.search(r'\d+(\.\d+)?', item)
@@ -2043,6 +2130,7 @@ def CSA_Table_26_clearance(p2p_voltage, Design_Buffer_Same_Structure, Max_Overvo
             if match:
                 num = float(match.group())
                 new_num = num + Design_Buffer_Same_Structure
+                new_num = np.char.mod(f'%0.{Numpy_round_integer}f', new_num)
                 new_item = item[:match.start()] + str(new_num) + item[match.end():]
                 #This new number is then appended to the array
                 CSA_26_Design_Clearance.append(new_item)
@@ -2864,7 +2952,7 @@ def create_report_excel():
               ]
     
     #The following will fill out the rest of the table with numbers in their respective problems
-    for i in range(2):
+    for i in range(3):
         row = [CSA13_titles[i], CSA13_1in[i],  CSA_Table13_data['Basic guy'][i], CSA_Table13_data['Design Clearance guy'][i], CSA_Table13_data['Basic ac'][i], CSA_Table13_data['Design Clearance ac'][i]]
         CSA13.append(row)
 
@@ -2948,7 +3036,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA14 = []
     for i in range(n_row_CSA_table_14):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA14.append((i + 1, 1, i + 1, n_column_CSA_table_14, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA14.append((i + 1, 1, i + 1, n_column_CSA_table_14, color_bkg_data_1))
@@ -3016,7 +3104,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA15 = []
     for i in range(n_row_CSA_table_15):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA15.append((i + 1, 1, i + 1, n_column_CSA_table_15, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA15.append((i + 1, 1, i + 1, n_column_CSA_table_15, color_bkg_data_1))
@@ -3083,7 +3171,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA16 = []
     for i in range(n_row_CSA_table_16):
-        if i < 3:
+        if i < 5:
             list_range_color_CSA16.append((i + 1, 1, i + 1, n_column_CSA_table_16, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA16.append((i + 1, 1, i + 1, n_column_CSA_table_16, color_bkg_data_1))
@@ -3146,7 +3234,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA17 = []
     for i in range(n_row_CSA_table_17):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA17.append((i + 1, 1, i + 1, n_column_CSA_table_17, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA17.append((i + 1, 1, i + 1, n_column_CSA_table_17, color_bkg_data_1))
@@ -3209,7 +3297,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA18 = []
     for i in range(n_row_CSA_table_18):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA18.append((i + 1, 1, i + 1, n_column_CSA_table_18, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA18.append((i + 1, 1, i + 1, n_column_CSA_table_18, color_bkg_data_1))
@@ -3274,7 +3362,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA20 = []
     for i in range(n_row_CSA_table_20):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA20.append((i + 1, 1, i + 1, n_column_CSA_table_20, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA20.append((i + 1, 1, i + 1, n_column_CSA_table_20, color_bkg_data_1))
@@ -3338,7 +3426,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA21 = []
     for i in range(n_row_CSA_table_21):
-        if i < 3:
+        if i < 7:
             list_range_color_CSA21.append((i + 1, 1, i + 1, n_column_CSA_table_21, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA21.append((i + 1, 1, i + 1, n_column_CSA_table_21, color_bkg_data_1))
@@ -3410,7 +3498,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA22 = []
     for i in range(n_row_CSA_table_22):
-        if i < 3:
+        if i < 7:
             list_range_color_CSA22.append((i + 1, 1, i + 1, n_column_CSA_table_22, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA22.append((i + 1, 1, i + 1, n_column_CSA_table_22, color_bkg_data_1))
@@ -3420,7 +3508,7 @@ def create_report_excel():
     # define cell format
     cell_format_CSA_22 = {
         #range_merge is used to merge cells with the format for instructions within the tuple list being: start_row (int), start_column (int), end_row (int), end_column (int), horizontal_align (str, optional) merged cell will be aligned: vertical centered, horizontal per spec
-        'range_merge': [(1, 1, 3, n_column_CSA_table_22, 'center'), (4, 1, 6, 1, 'center'), (4, 2, 4, 3, 'center'), (5, 2, 5, 3, 'center'), (6, 2, 6, 3, 'center')],
+        'range_merge': [(1, 1, 3, n_column_CSA_table_22, 'center'), (4, 1, 7, 1, 'center'), (4, 2, 4, 3, 'center'), (5, 2, 5, 3, 'center'), (6, 2, 6, 3, 'center')],
         'range_font_bold' : [(1, 1, 2, 1)],
         'range_color': list_range_color_CSA22,
         'range_border': [(1, 1, 1, n_column_CSA_table_22), (2, 1, n_row_CSA_table_22, n_column_CSA_table_22)],
@@ -3520,7 +3608,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA23 = []
     for i in range(n_row_CSA_table_23):
-        if i < 3:
+        if i < 7:
             list_range_color_CSA23.append((i + 1, 1, i + 1, n_column_CSA_table_23, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA23.append((i + 1, 1, i + 1, n_column_CSA_table_23, color_bkg_data_1))
@@ -3584,7 +3672,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA24 = []
     for i in range(n_row_CSA_table_24):
-        if i < 3:
+        if i < 5:
             list_range_color_CSA24.append((i + 1, 1, i + 1, n_column_CSA_table_24, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA24.append((i + 1, 1, i + 1, n_column_CSA_table_24, color_bkg_data_1))
@@ -3657,7 +3745,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA25 = []
     for i in range(n_row_CSA_table_25):
-        if i < 3:
+        if i < 5:
             list_range_color_CSA25.append((i + 1, 1, i + 1, n_column_CSA_table_25, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA25.append((i + 1, 1, i + 1, n_column_CSA_table_25, color_bkg_data_1))
@@ -3725,7 +3813,7 @@ def create_report_excel():
     #Creating an empty variable to determine the colour format that is used in the table
     list_range_color_CSA26 = []
     for i in range(n_row_CSA_table_26):
-        if i < 3:
+        if i < 6:
             list_range_color_CSA26.append((i + 1, 1, i + 1, n_column_CSA_table_26, color_bkg_header))
         elif i % 2 == 0:
             list_range_color_CSA26.append((i + 1, 1, i + 1, n_column_CSA_table_26, color_bkg_data_1))
