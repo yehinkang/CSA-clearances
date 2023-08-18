@@ -28,7 +28,7 @@ np.set_printoptions(threshold=sys.maxsize)
 
 #This is the input dictionary that all functions will use
 inputs = {
-    'p2p_voltage': 138,
+    'p2p_voltage': 69,
     'Max_Overvoltage': 5,
 
     'Buffer_Neut':4,
@@ -63,7 +63,6 @@ inputs = {
         'Is_main_wire_upper':True,
         'XING_P2P_Voltage':46,
         'Max_Overvoltage_XING': 5,
-
 }
 
 #The following function takes the decimal points in the dictionary and turns that into an integer to use in np.round in all functions
